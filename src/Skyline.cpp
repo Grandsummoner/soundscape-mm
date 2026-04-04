@@ -59,9 +59,6 @@ struct SkylineWidget : ModuleWidget {
         setModule(module);
         setPanel(createPanel(asset::plugin(pluginInstance, "res/Skyline.svg")));
 
-        addChild(createWidget<ScrewSilver>(Vec(0, 0)));
-        addChild(createWidget<ScrewSilver>(Vec(box.size.x - 15, 365)));
-
         addParam(createParamCentered<RoundBlackKnob>(Vec(30, 123), module, Skyline::LEVEL_PARAM));
 
         addInput(createInputCentered<PJ301MPort>(Vec(15, 200), module, Skyline::AUDIO_INPUT));
