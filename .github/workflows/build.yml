@@ -39,16 +39,24 @@ jobs:
         run: |
           make RACK_DIR=${{ github.workspace }}/Rack-SDK
 
+      - name: Package (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          make dist RACK_DIR=${{ github.workspace }}/Rack-SDK
+
       - name: Build (Windows)
         if: matrix.platform == 'windows'
         shell: bash
         run: |
-          make RACK_DIR=${{ github.workspace }}/Rack-SDK
+          export RACK_DIR=$(pwd)/Rack-SDK
+          make RACK_DIR=$(pwd)/Rack-SDK
 
-      - name: Package
+      - name: Package (Windows)
+        if: matrix.platform == 'windows'
         shell: bash
         run: |
-          make dist RACK_DIR=${{ github.workspace }}/Rack-SDK
+          export RACK_DIR=$(pwd)/Rack-SDK
+          make dist RACK_DIR=$(pwd)/Rack-SDK
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
