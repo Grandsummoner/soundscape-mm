@@ -33,18 +33,14 @@ struct Skyline : Module {
     }
 
     void process(const ProcessArgs& args) override {
-        // Get level knob value
         float level = params[LEVEL_PARAM].getValue();
 
-        // Audio: scale input by level
         float audioIn = inputs[AUDIO_INPUT].getVoltage();
         outputs[AUDIO_OUTPUT].setVoltage(audioIn * level);
 
-        // CV: pass through
         float cvIn = inputs[CV_INPUT].getVoltage();
         outputs[CV_OUTPUT].setVoltage(cvIn);
 
-        // Gate: pass through
         float gateIn = inputs[GATE_INPUT].getVoltage();
         outputs[GATE_OUTPUT].setVoltage(gateIn);
     }
@@ -63,22 +59,17 @@ struct SkylineWidget : ModuleWidget {
         setModule(module);
         setPanel(createPanel(asset::plugin(pluginInstance, "res/Skyline.svg")));
 
-        // Screws
         addChild(createWidget<ScrewSilver>(Vec(0, 0)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 15, 365)));
 
-        // Level knob (dark area)
         addParam(createParamCentered<RoundBlackKnob>(Vec(30, 123), module, Skyline::LEVEL_PARAM));
-        addChild(createWidget<ScrewSilver>(Vec(0, 99)));
 
-        // Inputs (dark area)
         addInput(createInputCentered<PJ301MPort>(Vec(15, 200), module, Skyline::AUDIO_INPUT));
         addInput(createInputCentered<PJ301MPort>(Vec(15, 225), module, Skyline::CV_INPUT));
         addInput(createInputCentered<PJ301MPort>(Vec(15, 250), module, Skyline::GATE_INPUT));
 
-        // Outputs (white area Y >= 330)
         addOutput(createOutputCentered<PJ301MPort>(Vec(15, 343), module, Skyline::AUDIO_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(Vec(45, 343), module, Skyline::CV_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(Vec(45, 343), module, Skyline::AUDIO_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(Vec(15, 368), module, Skyline::GATE_OUTPUT));
     }
 };
