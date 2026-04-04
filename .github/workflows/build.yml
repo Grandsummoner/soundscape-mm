@@ -12,42 +12,39 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            sdk-url: https://vcvrack.com/downloads/Rack-SDK-2.6.0-lin-x64.zip
+          - os: macos-latest
+            sdk-url: https://vcvrack.com/downloads/Rack-SDK-2.6.0-mac-x64+arm64.zip
+          - os: windows-latest
+            sdk-url: https://vcvrack.com/downloads/Rack-SDK-2.6.0-win-x64.zip
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Get Rack SDK (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          curl -sLo rack-sdk.zip https://vcvrack.com/downloads/Rack-SDK-2.6.0-lin-x64.zip
-          unzip -q rack-sdk.zip
-          mv Rack-SDK rack-sdk
-
-      - name: Get Rack SDK (Windows)
-        if: runner.os == 'Windows'
+      - name: Download Rack SDK
         shell: bash
         run: |
-          curl -sLo rack-sdk.zip https://vcvrack.com/downloads/Rack-SDK-2.6.0-win-x64.zip
+          curl -sLo rack-sdk.zip "${{ matrix.sdk-url }}"
           unzip -q rack-sdk.zip
-          mv Rack-SDK rack-sdk
+          ls -la
 
-      - name: Build (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          export RACK_DIR=${{ github.workspace }}/rack-sdk
-          make
-
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
+      - name: Build
         shell: bash
         run: |
-          export RACK_DIR=${{ github.workspace }}/rack-sdk
+          export RACK_DIR=${{ github.workspace }}/Rack-SDK
+          echo "RACK_DIR=$RACK_DIR"
+          ls -la
           make
 
-      - name: Upload plugin artifact
+      - name: Package
+        shell: bash
+        run: |
+          export RACK_DIR=${{ github.workspace }}/Rack-SDK
+          make dist
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: plugin-${{ matrix.os }}
