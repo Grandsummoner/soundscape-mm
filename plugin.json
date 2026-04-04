@@ -1,0 +1,19 @@
+{
+  "slug": "maybe",
+  "name": "maybe",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "maybe",
+  "author": "your name here",
+  "authorEmail": "your email here",
+  "authorUrl": "https://github.com/yourusername",
+  "pluginUrl": "https://github.com/yourusername/your-repo-name",
+  "modules": [
+    {
+      "slug": "Skyline",
+      "name": "Skyline",
+      "description": "Audio, CV and gate utility module",
+      "tags": ["Utility"]
+    }
+  ]
+}
