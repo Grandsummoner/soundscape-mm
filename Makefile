@@ -2,6 +2,8 @@
 
 RACK_DIR ?= ../Rack-SDK
 
+FLAGS += -Isrc
+
 SOURCES += $(wildcard src/*.cpp)
 
 DISTRIBUTABLES += res $(wildcard LICENSE*)
