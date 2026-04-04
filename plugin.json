@@ -4,10 +4,10 @@
   "version": "2.0.0",
   "license": "GPL-3.0-or-later",
   "brand": "maybe",
-  "author": "your name here",
-  "authorEmail": "your email here",
-  "authorUrl": "https://github.com/yourusername",
-  "pluginUrl": "https://github.com/yourusername/your-repo-name",
+  "author": "User",
+  "authorEmail": "user@github.com",
+  "authorUrl": "https://github.com/Grandsummoner",
+  "pluginUrl": "https://github.com/Grandsummoner/maybe",
   "modules": [
     {
       "slug": "Skyline",
