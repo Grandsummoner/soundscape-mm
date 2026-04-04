@@ -1,60 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="61" height="380">
+<svg xmlns="http://www.w3.org/2000/svg" width="20.32mm" height="128.5mm" viewBox="0 0 20.32 128.5">
 
-  <rect width="61" height="330" fill="#1a1a2e"/>
+  <rect width="20.32" height="111" fill="#1a1a2e"/>
 
-  <rect y="330" width="61" height="50" fill="#ffffff"/>
+  <rect y="111" width="20.32" height="17.5" fill="#ffffff"/>
 
-  <text x="30" y="14"
+  <text x="10.16" y="5"
     font-family="Arial, sans-serif"
-    font-size="10" font-weight="normal"
+    font-size="3.5" font-weight="normal"
     fill="#FFC800"
     text-anchor="middle">maybe</text>
 
-  <text x="30" y="26"
+  <text x="10.16" y="9"
     font-family="Arial, sans-serif"
-    font-size="8" font-weight="bold"
+    font-size="3" font-weight="bold"
     fill="#FFC800"
     text-anchor="middle">SKYLINE</text>
 
-  <text x="30" y="103"
+  <text x="10.16" y="34"
     font-family="Arial, sans-serif"
-    font-size="8" font-weight="bold"
+    font-size="3" font-weight="bold"
     fill="#ffffff"
     text-anchor="middle">LEVEL</text>
 
-  <text x="15" y="180"
+  <text x="5" y="60"
     font-family="Arial, sans-serif"
-    font-size="8" font-weight="bold"
+    font-size="3" font-weight="bold"
     fill="#ffffff"
     text-anchor="middle">AUDIO</text>
 
-  <text x="15" y="205"
+  <text x="5" y="69"
     font-family="Arial, sans-serif"
-    font-size="8" font-weight="bold"
+    font-size="3" font-weight="bold"
     fill="#ffffff"
     text-anchor="middle">CV</text>
 
-  <text x="15" y="230"
+  <text x="5" y="78"
     font-family="Arial, sans-serif"
-    font-size="8" font-weight="bold"
+    font-size="3" font-weight="bold"
     fill="#ffffff"
     text-anchor="middle">GATE</text>
 
-  <text x="15" y="334"
+  <text x="5" y="113"
     font-family="Arial, sans-serif"
-    font-size="7" font-weight="bold"
+    font-size="2.5" font-weight="bold"
     fill="#FF8585"
     text-anchor="middle">AUDIO</text>
 
-  <text x="45" y="334"
+  <text x="15" y="113"
     font-family="Arial, sans-serif"
-    font-size="7" font-weight="bold"
+    font-size="2.5" font-weight="bold"
     fill="#FF8585"
     text-anchor="middle">CV</text>
 
-  <text x="15" y="359"
+  <text x="5" y="122"
     font-family="Arial, sans-serif"
-    font-size="7" font-weight="bold"
+    font-size="2.5" font-weight="bold"
     fill="#000000"
     text-anchor="middle">GATE</text>
 
