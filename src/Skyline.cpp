@@ -1,4 +1,3 @@
-#include "plugin.hpp"
 #include "widgets/Knobs.hpp"
 #include "widgets/PanelTheme.hpp"
 
