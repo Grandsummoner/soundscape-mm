@@ -1,7 +1,13 @@
 #pragma once
 #include <rack.hpp>
 #include <settings.hpp>
-#include "../plugin.hpp"
+
+extern Plugin* pluginInstance;
+extern float maybeDefaultContrast;
+extern int maybeDefaultTheme;
+void maybeSaveSettings();
+void maybeApplyContrastToAll(float contrast);
+void maybeApplyThemeToAll(int theme);
 
 static constexpr float panelContrastDefault = 255.0f;
 static constexpr float panelContrastMin = 160.0f;
@@ -33,10 +39,10 @@ struct PanelThemeHelper {
     SvgPanel* boringPanel = nullptr;
     SvgPanel* toiletPaperPanel = nullptr;
     SvgPanel* winePanel = nullptr;
-    PanelContrastWidget* contrastWidget = nullptr;
 
-    void init(ModuleWidget* widget, const std::string& baseName, float* contrastSrc = nullptr) {
+    void init(ModuleWidget* widget, const std::string& baseName) {
         sashimiPanel = createPanel(asset::plugin(pluginInstance, "res/" + baseName + "_Sashimi.svg"));
+        widget->setPanel(sashimiPanel);
 
         auto loadPanel = [&](SvgPanel*& panel, const std::string& name) {
             std::shared_ptr<Svg> svg = Svg::load(asset::plugin(pluginInstance, "res/" + name));
@@ -51,11 +57,6 @@ struct PanelThemeHelper {
         loadPanel(boringPanel, baseName + "_Boring.svg");
         loadPanel(toiletPaperPanel, baseName + "_ToiletPaper.svg");
         loadPanel(winePanel, baseName + "_Wine.svg");
-
-        if (contrastSrc) {
-            contrastWidget = new PanelContrastWidget(widget->box.size, contrastSrc);
-            widget->addChild(contrastWidget);
-        }
     }
 
     template<typename TModule>
