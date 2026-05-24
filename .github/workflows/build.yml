@@ -1,43 +1,30 @@
 name: Build VCV Plugin
+on: [push, pull_request]
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+env:
+  rack-sdk-version: 2.6.0
+  rack-plugin-toolchain-dir: /home/build/rack-plugin-toolchain
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
-    name: Build Windows
-    runs-on: windows-latest
-
+    name: win-x64
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/qno/rack-plugin-toolchain-win-linux
+      options: --user root
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download Rack SDK
-        shell: bash
+      - name: Build plugin
         run: |
-          curl -sLo rack-sdk.zip "https://vcvrack.com/downloads/Rack-SDK-2.6.0-win-x64.zip"
-          unzip -q rack-sdk.zip
-
-      - name: Check createPanel
-        shell: bash
-        run: grep -n "createPanel" $(pwd)/Rack-SDK/include/helpers.hpp | head -20
-
-      - name: Build
-        shell: bash
-        run: |
-          export RACK_DIR=$(pwd)/Rack-SDK
-          make RACK_DIR=$(pwd)/Rack-SDK
-
-      - name: Package
-        shell: bash
-        run: |
-          export RACK_DIR=$(pwd)/Rack-SDK
-          make dist RACK_DIR=$(pwd)/Rack-SDK
-
+          export PLUGIN_DIR=$GITHUB_WORKSPACE
+          pushd ${{ env.rack-plugin-toolchain-dir }}
+          make plugin-build-win-x64
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          path: ${{ env.rack-plugin-toolchain-dir }}/plugin-build
           name: plugin-windows
-          path: dist/
