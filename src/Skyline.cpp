@@ -466,6 +466,9 @@ struct Skyline : Module {
         if (j) for(int ch=0;ch<8;ch++) scaleIndex[ch]=(int)json_integer_value(json_array_get(j,ch));
         j = json_object_get(root, "chanMuted");
         if (j) for(int ch=0;ch<8;ch++) chanMuted[ch]=json_boolean_value(json_array_get(j,ch));
+}  // end dataFromJson
+}  // end Skyline struct
+
 struct SkylineWidget : ModuleWidget {
     SkylineWidget(Skyline* module) {
         setModule(module);
@@ -539,7 +542,3 @@ struct SkylineWidget : ModuleWidget {
 };
 
 Model* modelSkyline = createModel<Skyline, SkylineWidget>("Skyline");
-
-}
-
-}
