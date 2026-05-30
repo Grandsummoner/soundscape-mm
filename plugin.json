@@ -12,8 +12,8 @@
     {
       "slug": "Skyline",
       "name": "Skyline",
-      "description": ""description": "8 channel 16-step CV sequencer"",
-      "tags": ["Utility"]
+      "description": "8 channel 16-step CV sequencer",
+      "tags": ["Sequencer"]
     }
   ]
 }
