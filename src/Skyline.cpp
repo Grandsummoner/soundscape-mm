@@ -479,57 +479,108 @@ struct SkylineWidget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2*RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        // x positions derived from SVG px / 2.953
-        const float cX[8] = {8.91f, 20.96f, 33.02f, 45.07f, 57.16f, 69.22f, 81.27f, 93.33f};
+        const float cX[8] = {5.42f,18.29f,31.49f,44.36f,57.23f,70.1f,83.31f,96.17f};
 
-        // 8 CV outputs y=23.7, channel LEDs y=29.46
+        // 8 CV outputs y=26.08, LEDs y=33.86
         for (int ch = 0; ch < 8; ch++) {
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(cX[ch], 23.7f)), module, Skyline::CV_OUTPUTS + ch));
+                mm2px(Vec(cX[ch], 26.08f)), module, Skyline::CV_OUTPUTS + ch));
             addChild(createLightCentered<SmallLight<RedLight>>(
-                mm2px(Vec(cX[ch], 29.46f)), module, Skyline::CHANNEL_LIGHTS + ch));
+                mm2px(Vec(cX[ch], 33.86f)), module, Skyline::CHANNEL_LIGHTS + ch));
         }
 
-        // CLK/CV y=40.3, RST/HLD y=51.47
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.93f, 40.3f)), module, Skyline::CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.93f, 51.47f)), module, Skyline::RESET_INPUT));
+        // CLK/CV y=48.09, RST/HLD y=61.97
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.79f, 48.09f)), module, Skyline::CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.79f, 61.97f)), module, Skyline::RESET_INPUT));
 
-        // Knobs: OFFSET x=33.32, ATTEN x=46.97, DIVIDE x=60.62  y=43.35
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(33.32f, 43.35f)), module, Skyline::OFFSET_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(46.97f, 43.35f)), module, Skyline::ATTENUATE_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(60.62f, 43.35f)), module, Skyline::DIVIDE_PARAM));
+        // Knobs y=53.84
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(33.19f, 53.84f)), module, Skyline::OFFSET_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(50.12f, 53.84f)), module, Skyline::ATTENUATE_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(67.05f, 53.84f)), module, Skyline::DIVIDE_PARAM));
 
-        // Mode buttons row 1 y=37.25: MUTE x=72.98, LENGTH x=83.98, SHIFT x=94.99
+        // Mode buttons row 1 y=46.05
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedLight>>>(
-            mm2px(Vec(72.98f, 37.25f)), module, Skyline::MUTE_PARAM,   Skyline::MUTE_LIGHT));
+            mm2px(Vec(77.21f, 46.05f)), module, Skyline::MUTE_PARAM,   Skyline::MUTE_LIGHT));
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(
-            mm2px(Vec(83.98f, 37.25f)), module, Skyline::LENGTH_PARAM, Skyline::LENGTH_LIGHT));
+            mm2px(Vec(87.03f, 46.05f)), module, Skyline::LENGTH_PARAM, Skyline::LENGTH_LIGHT));
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(
-            mm2px(Vec(94.99f, 37.25f)), module, Skyline::SHIFT_PARAM,  Skyline::SHIFT_LIGHT));
+            mm2px(Vec(96.17f, 46.05f)), module, Skyline::SHIFT_PARAM,  Skyline::SHIFT_LIGHT));
 
-        // Mode buttons row 2 y=49.1: SCALE x=72.98, SAVE x=83.98, RECALL x=94.99
+        // Mode buttons row 2 y=59.94
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(
-            mm2px(Vec(72.98f, 49.1f)), module, Skyline::SCALE_PARAM,  Skyline::SCALE_LIGHT));
+            mm2px(Vec(77.21f, 59.94f)), module, Skyline::SCALE_PARAM,  Skyline::SCALE_LIGHT));
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
-            mm2px(Vec(83.98f, 49.1f)), module, Skyline::SAVE_PARAM,   Skyline::SAVE_LIGHT));
+            mm2px(Vec(87.03f, 59.94f)), module, Skyline::SAVE_PARAM,   Skyline::SAVE_LIGHT));
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
-            mm2px(Vec(94.99f, 49.1f)), module, Skyline::RECALL_PARAM, Skyline::RECALL_LIGHT));
+            mm2px(Vec(96.17f, 59.94f)), module, Skyline::RECALL_PARAM, Skyline::RECALL_LIGHT));
 
-        // 8 sliders y=71.11
+        // 8 sliders y=86.01
         for (int ch = 0; ch < 8; ch++) {
             addParam(createParamCentered<Trimpot>(
-                mm2px(Vec(cX[ch], 71.11f)), module, Skyline::SLIDER_PARAMS + ch));
+                mm2px(Vec(cX[ch], 86.01f)), module, Skyline::SLIDER_PARAMS + ch));
         }
 
-        // Step buttons row 1 y=94.14, row 2 y=108.7
+        // Step buttons row 1 y=109.04, row 2 y=121.91
         for (int i = 0; i < 8; i++) {
             addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<YellowLight>>>(
-                mm2px(Vec(cX[i], 94.14f)), module,
+                mm2px(Vec(cX[i], 109.04f)), module,
                 Skyline::STEP_PARAMS + i,   Skyline::STEP_LIGHTS + i));
             addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<YellowLight>>>(
-                mm2px(Vec(cX[i], 108.7f)), module,
+                mm2px(Vec(cX[i], 121.91f)), module,
                 Skyline::STEP_PARAMS + 8+i, Skyline::STEP_LIGHTS + 8+i));
         }
+
+        // ===== PANEL LABELS =====
+        // Helper lambda to add a centred label
+        auto addLabel = [&](float x_mm, float y_mm, const char* text, float size = 11.f) {
+            auto* label = new rack::ui::Label;
+            label->box.pos = mm2px(Vec(x_mm, y_mm));
+            label->text = text;
+            label->fontSize = size;
+            label->color = nvgRGB(0x44, 0x44, 0x44);
+            label->alignment = rack::ui::Label::CENTER_ALIGNMENT;
+            addChild(label);
+        };
+
+        // Channel numbers
+        addLabel(5.42f,  19.0f, "1");
+        addLabel(18.29f, 19.0f, "2");
+        addLabel(31.49f, 19.0f, "3");
+        addLabel(44.36f, 19.0f, "4");
+        addLabel(57.23f, 19.0f, "5");
+        addLabel(70.1f,  19.0f, "6");
+        addLabel(83.31f, 19.0f, "7");
+        addLabel(96.17f, 19.0f, "8");
+
+        // Left column
+        addLabel(7.79f, 41.5f, "CLK/CV", 9.f);
+        addLabel(7.79f, 65.5f, "RST/HLD", 9.f);
+
+        // Knobs
+        addLabel(33.19f, 44.5f, "OFFSET", 9.f);
+        addLabel(50.12f, 44.5f, "ATTEN",  9.f);
+        addLabel(67.05f, 44.5f, "DIVIDE", 9.f);
+
+        // Mode buttons row 1
+        addLabel(77.21f, 56.5f, "MUTE",   9.f);
+        addLabel(87.03f, 56.5f, "LEN",    9.f);
+        addLabel(96.17f, 56.5f, "SHIFT",  9.f);
+
+        // Mode buttons row 2
+        addLabel(77.21f, 70.5f, "SCALE",  9.f);
+        addLabel(87.03f, 70.5f, "SAVE",   9.f);
+        addLabel(96.17f, 70.5f, "RECALL", 9.f);
+
+        // Bottom step labels
+        addLabel(5.42f,  126.0f, "CLEAR",  8.f);
+        addLabel(18.29f, 126.0f, "SMOOTH", 8.f);
+        addLabel(31.49f, 126.0f, "RND",    8.f);
+        addLabel(44.36f, 126.0f, "FREEZE", 8.f);
+        addLabel(57.23f, 126.0f, "FWD",    8.f);
+        addLabel(70.1f,  126.0f, "REV",    8.f);
+        addLabel(83.31f, 126.0f, "PEND",   8.f);
+        addLabel(96.17f, 126.0f, "RND SEQ",8.f);
+
     }
 };
 
