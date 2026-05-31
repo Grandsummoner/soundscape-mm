@@ -514,9 +514,10 @@ struct SkylineWidget : ModuleWidget {
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(96.17f, 59.94f)), module, Skyline::RECALL_PARAM, Skyline::RECALL_LIGHT));
 
-        // 8 sliders y=86.01
+        // 8 sliders - BefacoSlidePot is 8.59px wide, fits in 20HP
+        // BefacoSlidePot is 104px tall (~35mm) - centred in slider area
         for (int ch = 0; ch < 8; ch++) {
-            addParam(createParamCentered<Trimpot>(
+            addParam(createParamCentered<BefacoSlidePot>(
                 mm2px(Vec(cX[ch], 86.01f)), module, Skyline::SLIDER_PARAMS + ch));
         }
 
@@ -530,56 +531,64 @@ struct SkylineWidget : ModuleWidget {
                 Skyline::STEP_PARAMS + 8+i, Skyline::STEP_LIGHTS + 8+i));
         }
 
-        // ===== PANEL LABELS =====
-        // Helper lambda to add a centred label
-        auto addLabel = [&](float x_mm, float y_mm, const char* text, float size = 11.f) {
-            auto* label = new rack::ui::Label;
-            label->box.pos = mm2px(Vec(x_mm, y_mm));
-            label->text = text;
-            label->fontSize = size;
-            label->color = nvgRGB(0x44, 0x44, 0x44);
-            label->alignment = rack::ui::Label::CENTER_ALIGNMENT;
-            addChild(label);
+        // ===== PANEL LABELS drawn via NanoVG =====
+        struct PanelLabel : widget::Widget {
+            std::string text;
+            float fontSize;
+            NVGcolor color;
+            PanelLabel(Vec centre, std::string t, float sz, NVGcolor c) {
+                // pos is the centre point of the label
+                box.pos = centre.minus(Vec(40, 8));
+                box.size = Vec(80, 16);
+                text = t; fontSize = sz; color = c;
+            }
+            void draw(const DrawArgs& args) override {
+                nvgFontSize(args.vg, fontSize);
+                nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+                nvgFillColor(args.vg, color);
+                nvgText(args.vg, box.size.x/2, box.size.y/2, text.c_str(), NULL);
+            }
+        };
+        auto addPL = [&](float x_mm, float y_mm, std::string t, float sz = 11.f, NVGcolor c = nvgRGB(0x44,0x44,0x44)) {
+            addChild(new PanelLabel(mm2px(Vec(x_mm, y_mm)), t, sz, c));
         };
 
-        // Channel numbers
-        addLabel(5.42f,  19.0f, "1");
-        addLabel(18.29f, 19.0f, "2");
-        addLabel(31.49f, 19.0f, "3");
-        addLabel(44.36f, 19.0f, "4");
-        addLabel(57.23f, 19.0f, "5");
-        addLabel(70.1f,  19.0f, "6");
-        addLabel(83.31f, 19.0f, "7");
-        addLabel(96.17f, 19.0f, "8");
+        // Title
+        addPL(50.8f,  5.0f,  "VOLTAGE BLOCK", 14.f, nvgRGB(0x11,0x11,0x11));
+        addPL(50.8f, 10.0f,  "8 CHANNEL CV SEQUENCER", 8.f, nvgRGB(0x99,0x99,0x99));
+
+        // Channel numbers above jacks
+        addPL(5.42f,  19.0f, "1", 10.f);  addPL(18.29f, 19.0f, "2", 10.f);
+        addPL(31.49f, 19.0f, "3", 10.f);  addPL(44.36f, 19.0f, "4", 10.f);
+        addPL(57.23f, 19.0f, "5", 10.f);  addPL(70.1f,  19.0f, "6", 10.f);
+        addPL(83.31f, 19.0f, "7", 10.f);  addPL(96.17f, 19.0f, "8", 10.f);
 
         // Left column
-        addLabel(7.79f, 41.5f, "CLK/CV", 9.f);
-        addLabel(7.79f, 65.5f, "RST/HLD", 9.f);
+        addPL(7.79f,  41.5f, "CLK/CV",  9.f);
+        addPL(7.79f,  66.0f, "RST/HLD", 9.f);
 
-        // Knobs
-        addLabel(33.19f, 44.5f, "OFFSET", 9.f);
-        addLabel(50.12f, 44.5f, "ATTEN",  9.f);
-        addLabel(67.05f, 44.5f, "DIVIDE", 9.f);
+        // Knob labels above
+        addPL(33.19f, 44.0f, "OFFSET", 9.f);
+        addPL(50.12f, 44.0f, "ATTEN",  9.f);
+        addPL(67.05f, 44.0f, "DIVIDE", 9.f);
 
-        // Mode buttons row 1
-        addLabel(77.21f, 56.5f, "MUTE",   9.f);
-        addLabel(87.03f, 56.5f, "LEN",    9.f);
-        addLabel(96.17f, 56.5f, "SHIFT",  9.f);
-
-        // Mode buttons row 2
-        addLabel(77.21f, 70.5f, "SCALE",  9.f);
-        addLabel(87.03f, 70.5f, "SAVE",   9.f);
-        addLabel(96.17f, 70.5f, "RECALL", 9.f);
+        // Mode button labels below
+        addPL(77.21f, 57.0f, "MUTE",   9.f);
+        addPL(87.03f, 57.0f, "LEN",    9.f);
+        addPL(96.17f, 57.0f, "SHIFT",  9.f);
+        addPL(77.21f, 70.5f, "SCALE",  9.f);
+        addPL(87.03f, 70.5f, "SAVE",   9.f);
+        addPL(96.17f, 70.5f, "RECALL", 9.f);
 
         // Bottom step labels
-        addLabel(5.42f,  126.0f, "CLEAR",  8.f);
-        addLabel(18.29f, 126.0f, "SMOOTH", 8.f);
-        addLabel(31.49f, 126.0f, "RND",    8.f);
-        addLabel(44.36f, 126.0f, "FREEZE", 8.f);
-        addLabel(57.23f, 126.0f, "FWD",    8.f);
-        addLabel(70.1f,  126.0f, "REV",    8.f);
-        addLabel(83.31f, 126.0f, "PEND",   8.f);
-        addLabel(96.17f, 126.0f, "RND SEQ",8.f);
+        addPL(5.42f,  126.5f, "CLEAR",   8.f);
+        addPL(18.29f, 126.5f, "SMOOTH",  8.f);
+        addPL(31.49f, 126.5f, "RND",     8.f);
+        addPL(44.36f, 126.5f, "FREEZE",  8.f);
+        addPL(57.23f, 126.5f, "FWD",     8.f);
+        addPL(70.1f,  126.5f, "REV",     8.f);
+        addPL(83.31f, 126.5f, "PEND",    8.f);
+        addPL(96.17f, 126.5f, "RND SEQ", 8.f);
 
     }
 };
