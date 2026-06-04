@@ -134,6 +134,8 @@ struct Skyline : Module {
     dsp::SchmittTrigger clockTrig;
     dsp::SchmittTrigger resetTrig;
     dsp::SchmittTrigger stepTrig[16];
+    dsp::SchmittTrigger saveTrig;
+    dsp::SchmittTrigger recallTrig;
     dsp::SchmittTrigger muteTrig;
     dsp::SchmittTrigger lengthTrig;
     dsp::SchmittTrigger shiftTrig;
@@ -218,13 +220,16 @@ struct Skyline : Module {
 
         // ---- Mode button logic ----
         // Manual: buttons are momentary, modes toggle
-        // VCVLightLatch is self-latching - read param values directly
+        // VCVLightLatch params - read directly for toggle modes
         muteMode   = params[MUTE_PARAM].getValue()   > 0.5f;
         lengthMode = params[LENGTH_PARAM].getValue()  > 0.5f;
         shiftMode  = params[SHIFT_PARAM].getValue()   > 0.5f;
         scaleMode  = params[SCALE_PARAM].getValue()   > 0.5f;
-        saveMode   = params[SAVE_PARAM].getValue()    > 0.5f;
-        recallMode = params[RECALL_PARAM].getValue()  > 0.5f;
+        // SAVE/RECALL are momentary VCVButton - use edge detection
+        if (saveTrig.process(params[SAVE_PARAM].getValue()))
+            saveMode = !saveMode;
+        if (recallTrig.process(params[RECALL_PARAM].getValue()))
+            recallMode = !recallMode;
 
         // ---- Step button logic (manual accurate) ----
         for (int i = 0; i < 16; i++) {
@@ -336,11 +341,9 @@ struct Skyline : Module {
             for (int ch = 0; ch < 8; ch++) {
                 if (frozen[ch]) continue;
                 advanceChannel(ch);
-                // Live recording: record slider at this step
-                // Only record if not in any mode (normal playback)
+                // Live recording: record slider to current step on clock tick
                 if (!muteMode && !lengthMode && !shiftMode && !saveMode && !recallMode) {
-                    // Uncomment to enable live recording:
-                    // stepCV[ch][seqPos[ch]] = params[SLIDER_PARAMS + ch].getValue();
+                    stepCV[ch][seqPos[ch]] = params[SLIDER_PARAMS + ch].getValue();
                 }
             }
         }
@@ -536,10 +539,9 @@ struct SkylineWidget : ModuleWidget {
         addParam(createParamCentered<VCVButton>(
             mm2px(Vec(96.17f, 59.94f)), module, Skyline::RECALL_PARAM));
 
-        // 8 sliders - BefacoSlidePot is 8.59px wide, fits in 20HP
-        // BefacoSlidePot is 104px tall (~35mm) - centred in slider area
+        // 8 sliders as small knobs (VCV limitation - no slim fader exists)
         for (int ch = 0; ch < 8; ch++) {
-            addParam(createParamCentered<BefacoSlidePot>(
+            addParam(createParamCentered<RoundSmallBlackKnob>(
                 mm2px(Vec(cX[ch], 86.01f)), module, Skyline::SLIDER_PARAMS + ch));
         }
 
