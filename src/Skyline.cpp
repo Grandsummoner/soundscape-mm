@@ -140,8 +140,6 @@ struct Skyline : Module {
     dsp::SchmittTrigger lengthTrig;
     dsp::SchmittTrigger shiftTrig;
     dsp::SchmittTrigger scaleTrig;
-    dsp::SchmittTrigger saveTrig;
-    dsp::SchmittTrigger recallTrig;
     int  divCount    = 0;
 
     // ---- Glide ----
