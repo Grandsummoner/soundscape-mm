@@ -158,11 +158,8 @@ struct Skyline : Module {
         configInput(CLOCK_INPUT, "Clock");
         configInput(RESET_INPUT, "Reset / Hold");
 
-        // Initialise step CVs to a simple ascending ramp so outputs are
-        // non-zero from the start — makes it easy to verify wiring
-        for (int ch = 0; ch < 8; ch++)
-            for (int s = 0; s < 16; s++)
-                stepCV[ch][s] = (s / 15.0f) * 4.0f;   // 0V → 4V ramp
+        // Steps default to 0V — user sets values by holding a step button
+        // and moving the corresponding channel slider
     }
 
     // ---- Advance one channel ----
@@ -369,11 +366,15 @@ struct Skyline : Module {
         bool clocked = false;
 
         if (clkMode == 1) {
-            // CV mode: clock input voltage (0-10V) maps to step position
+            // CV mode: clock input voltage maps position within each channel's length
+            // 0V = step 1, 10V = last step. RST/HLD high = hold (don't update position)
             if (!holdHigh) {
-                float cv  = inputs[CLOCK_INPUT].getVoltage();
-                int   pos = (int)clamp(cv / 10.f * 16.f, 0.f, 15.f);
-                for (int ch = 0; ch < 8; ch++) seqPos[ch] = pos;
+                float cv = inputs[CLOCK_INPUT].getVoltage();
+                for (int ch = 0; ch < 8; ch++) {
+                    int len = seqLength[ch];
+                    int pos = (int)clamp(cv / 10.f * (float)len, 0.f, (float)(len - 1));
+                    seqPos[ch] = pos;
+                }
             }
         }
         else {
@@ -539,7 +540,7 @@ struct Skyline : Module {
         Module::onReset(e);
         for (int ch=0;ch<8;ch++) {
             for (int s=0;s<16;s++) {
-                stepCV[ch][s]     = (s / 15.0f) * 4.0f;
+                stepCV[ch][s]     = 0.f;
                 stepMuted[ch][s]  = false;
                 stepSmooth[ch][s] = false;
             }
