@@ -397,14 +397,14 @@ struct Skyline : Module {
         if (clocked) {
             for (int ch = 0; ch < 8; ch++) {
                 if (frozen[ch]) continue;
-                advanceChannel(ch);
-                // Method B: live recording — write each channel's slider to its
-                // newly-active step on every clock tick (manual p.6).
-                // Only when no mode button is active.
+                // Method B: live recording — record slider to the step that is
+                // CURRENTLY active BEFORE advancing. This captures the slider
+                // position that corresponds to the step the user just heard.
                 if (noMode) {
                     stepCV[ch][seqPos[ch]] =
                         params[SLIDER_PARAMS + ch].getValue();
                 }
+                advanceChannel(ch);
             }
         }
 
@@ -448,17 +448,20 @@ struct Skyline : Module {
 
         // ================================================================
         // 8. STEP LIGHTS
-        // Show current position on selected channel
+        // Current step = full bright red
+        // In-length, not current = dim red (visible but not dominant)
+        // Muted step = very dim
+        // Out of length = off
         // ================================================================
         for (int i = 0; i < 16; i++) {
             bool isCurrent = (i == seqPos[selectedChan]);
             bool isMuted   = stepMuted[selectedChan][i];
             bool inLen     = (i < seqLength[selectedChan]);
-            float b = 0.f;
-            if      (isCurrent)  b = 1.f;
-            else if (!inLen)     b = 0.f;
-            else if (isMuted)    b = 0.05f;
-            else                 b = 0.2f;
+            float b;
+            if      (isCurrent)  b = 1.0f;
+            else if (!inLen)     b = 0.0f;
+            else if (isMuted)    b = 0.04f;
+            else                 b = 0.15f;
             lights[STEP_LIGHTS + i].setBrightness(b);
         }
     }
@@ -744,11 +747,12 @@ struct SkylineWidget : ModuleWidget {
         }
 
         // ── STEP BUTTONS (2 rows × 8) ───────────────────────────
+        // RedLight: current step flashes red, matches Voltage Block hardware
         for (int i = 0; i < 8; i++) {
-            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<YellowLight>>>(
+            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<RedLight>>>(
                 mm2px(Vec(cX[i], yS1)), module,
                 Skyline::STEP_PARAMS + i,   Skyline::STEP_LIGHTS + i));
-            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<YellowLight>>>(
+            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<RedLight>>>(
                 mm2px(Vec(cX[i], yS2)), module,
                 Skyline::STEP_PARAMS + 8+i, Skyline::STEP_LIGHTS + 8+i));
         }
