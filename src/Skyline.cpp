@@ -264,55 +264,51 @@ struct Skyline : Module {
                     // MUTE + top-row → toggle channel mute
                     chanMuted[i] = !chanMuted[i];
                 } else {
-                    // MUTE + bottom-row → toggle step mute on selected channel
-                    stepMuted[selectedChan][i - 8] = !stepMuted[selectedChan][i - 8];
+                    // MUTE + bottom-row (i=8-15) → toggle step mute for steps 8-15
+                    // stepMuted is 0-indexed 0-15; bottom buttons directly map to steps 8-15
+                    stepMuted[selectedChan][i] = !stepMuted[selectedChan][i];
                 }
             }
             else if (lengthMode) {
-                if (i < 8) {
-                    // Top-row (ch 1-8): select channel only — do NOT set length
-                    selectedChan = i;
-                } else {
-                    // Bottom-row (steps 9-16, i=8-15): set length for selected channel
-                    seqLength[selectedChan] = i + 1;   // i=8→length 9, i=15→length 16
-                    if (seqPos[selectedChan] >= seqLength[selectedChan])
-                        seqPos[selectedChan] = 0;
-                }
+                // Manual p.9: LENGTH + press the button of the last step you want.
+                // "If you only want an 8 step sequence, select the 8th STEP button."
+                // ALL 16 buttons set length (1-16). Top-row buttons ALSO select channel.
+                if (i < 8) selectedChan = i;
+                seqLength[selectedChan] = i + 1;   // i=0→length 1 … i=15→length 16
+                if (seqPos[selectedChan] >= seqLength[selectedChan])
+                    seqPos[selectedChan] = 0;
             }
             else if (shiftMode) {
                 if (i < 8) {
                     // SHIFT + top-row → select channel for direction change
                     selectedChan = i;
                 } else {
-                    // SHIFT + bottom buttons 9-12 (i=8-11) → set direction
-                    // Manual: FWD=btn9, REV=btn10 (SMOOTH), RND=btn11 (RND),
-                    //         FREEZE=btn12, FWD=btn13, REV=btn14, PEND=btn15, RNDSEQ=btn16
-                    // Simplified mapping per manual p.7:
-                    //   SHIFT+ch selects channel, then SHIFT+step sets direction
-                    //   FWD(step5/i=12), REV(step6/i=13), PEND(step7/i=14), RNDSEQ(step8/i=15)
+                    // SHIFT + bottom-row functions match panel label order:
+                    // btn9=CLEAR, btn10=SMOOTH, btn11=RND, btn12=FREEZE,
+                    // btn13=FWD,  btn14=REV,    btn15=PEND, btn16=RNDSEQ
                     switch (i) {
-                        case 8:  // SMOOTH: toggle smooth on current step
+                        case 8:  // CLEAR: zero all steps for selected channel
+                            for (int s = 0; s < 16; s++) stepCV[selectedChan][s] = 0.f;
+                            break;
+                        case 9:  // SMOOTH: toggle smooth on current playing step
                             stepSmooth[selectedChan][seqPos[selectedChan]] =
                                 !stepSmooth[selectedChan][seqPos[selectedChan]];
                             break;
-                        case 9:  // RND: randomise selected channel
+                        case 10: // RND: randomise all steps for selected channel
                             for (int s = 0; s < seqLength[selectedChan]; s++)
                                 stepCV[selectedChan][s] = random::uniform() * 5.f;
                             break;
-                        case 10: // FREEZE: toggle freeze on selected channel
+                        case 11: // FREEZE: toggle freeze on selected channel
                             frozen[selectedChan] = !frozen[selectedChan];
                             break;
-                        case 11: // FWD
+                        case 12: // FWD
                             direction[selectedChan] = 0; break;
-                        case 12: // REV
+                        case 13: // REV
                             direction[selectedChan] = 1; break;
-                        case 13: // PEND
+                        case 14: // PEND
                             direction[selectedChan] = 2; break;
-                        case 14: // RND SEQ
+                        case 15: // RNDSEQ
                             direction[selectedChan] = 3; break;
-                        case 15: // CLEAR: zero all steps for selected channel
-                            for (int s = 0; s < 16; s++) stepCV[selectedChan][s] = 0.f;
-                            break;
                         default: break;
                     }
                 }
