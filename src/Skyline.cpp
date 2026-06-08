@@ -95,6 +95,12 @@ struct Skyline : Module {
     bool prevMuteMode=false, prevLengthMode=false, prevShiftMode=false;
     bool prevScaleMode=false, prevSaveMode=false,  prevRecallMode=false;
 
+    // editStep: which step is currently locked for slider editing.
+    // -1 = no step locked. Click a step button (normal mode) to lock it,
+    // click it again to unlock. While locked, all 8 sliders immediately
+    // write to stepCV[ch][editStep] for all 8 channels every frame.
+    int editStep = -1;
+
     // ── Triggers ─────────────────────────────────────────────
     dsp::SchmittTrigger clockTrig, resetTrig, stepTrig[16];
     int divCount = 0;
@@ -170,6 +176,15 @@ struct Skyline : Module {
         recallMode = params[RECALL_PARAM].getValue()  > 0.5f;
 
         // Flush step triggers on any mode release to prevent bleed
+        // Also clear editStep when entering any mode
+        bool anyActivated = (!prevMuteMode   && muteMode)   ||
+                            (!prevLengthMode && lengthMode) ||
+                            (!prevShiftMode  && shiftMode)  ||
+                            (!prevScaleMode  && scaleMode)  ||
+                            (!prevSaveMode   && saveMode)   ||
+                            (!prevRecallMode && recallMode);
+        if (anyActivated) editStep = -1;
+
         bool anyReleased = (prevMuteMode   && !muteMode)   ||
                            (prevLengthMode && !lengthMode) ||
                            (prevShiftMode  && !shiftMode)  ||
@@ -265,38 +280,34 @@ struct Skyline : Module {
                 if (i < 8) selectedChan = i;
             }
             else {
-                // Normal mode: top-row selects channel AND sets editStep
-                if (i < 8) {
-                    if (selectedChan == i) {
-                        // Clicking same channel toggles edit lock off
-                        selectedChan = i;  // keep selected but editStep stays
-                    } else {
-                        selectedChan = i;
-                    }
+                // Normal mode:
+                // Top-row (i<8)  → select channel for display + set editStep
+                // Bottom-row (i>=8) → set editStep to that step
+                // Clicking the same step again → cancel editStep (toggle off)
+                if (editStep == i) {
+                    editStep = -1;  // unlock
+                } else {
+                    editStep = i;
+                    if (i < 8) selectedChan = i;
                 }
             }
         }
 
         // ============================================================
-        // 3. STEP EDITING — VCV MOUSE-FRIENDLY APPROACH
+        // 3. STEP EDITING via editStep lock
         //
-        // The real module: hold step button + move slider = write
-        // ALL 8 sliders to ALL 8 channels for that step simultaneously.
-        //
-        // In VCV: check if ANY step button is currently held (getValue>0.5).
-        // If yes, for ALL held step buttons, write ALL 8 sliders to
-        // stepCV[ch][step] for all 8 channels.
-        // This means: click and hold step 3, then drag slider 1 up → ch1
-        // step 3 gets that value. Works per-step for all channels.
+        // When editStep >= 0, all 8 sliders continuously write to
+        // stepCV[ch][editStep] for all 8 channels every frame.
+        // User workflow:
+        //   1. Click a step button → it locks (editStep = that step)
+        //      Step LED pulses brighter to confirm
+        //   2. Drag any/all sliders to set CV for that step
+        //   3. Click the same step button again → unlocks (editStep = -1)
+        //      OR click another step button to jump to that step
         // ============================================================
-        if (noMode) {
-            for (int i = 0; i < 16; i++) {
-                if (params[STEP_PARAMS + i].getValue() > 0.5f) {
-                    // All 8 sliders write to this step across all channels
-                    for (int ch = 0; ch < 8; ch++) {
-                        stepCV[ch][i] = params[SLIDER_PARAMS + ch].getValue();
-                    }
-                }
+        if (noMode && editStep >= 0) {
+            for (int ch = 0; ch < 8; ch++) {
+                stepCV[ch][editStep] = params[SLIDER_PARAMS + ch].getValue();
             }
         }
 
@@ -404,16 +415,26 @@ struct Skyline : Module {
 
         // ============================================================
         // 9. STEP LIGHTS
+        // Full bright red  = current playhead position
+        // Blinking yellow  = editStep locked for editing (override color
+        //                    by setting brightness > 1.0 — VCV clamps but
+        //                    we use a separate approach: just full bright)
+        // Dim red          = in-length, not current
+        // Off              = outside sequence length
+        // Muted            = very dim
         // ============================================================
         for (int i = 0; i < 16; i++) {
             bool isCurrent = (i == seqPos[selectedChan]);
+            bool isEdit    = (i == editStep);
             bool isMuted   = stepMuted[selectedChan][i];
             bool inLen     = (i < seqLength[selectedChan]);
             float b;
-            if      (isCurrent)  b = 1.0f;
-            else if (!inLen)     b = 0.0f;
-            else if (isMuted)    b = 0.04f;
-            else                 b = 0.15f;
+            if      (isEdit && isCurrent) b = 1.0f;   // both: full bright
+            else if (isEdit)              b = 0.6f;   // edit lock: medium bright
+            else if (isCurrent)          b = 1.0f;   // playhead: full bright
+            else if (!inLen)             b = 0.0f;
+            else if (isMuted)            b = 0.04f;
+            else                         b = 0.15f;
             lights[STEP_LIGHTS + i].setBrightness(b);
         }
     }
@@ -513,7 +534,7 @@ struct Skyline : Module {
             frozen[ch]=false; glideCV[ch]=0.f;
             liveRecord[ch]=false;
         }
-        selectedChan=0; divCount=0;
+        selectedChan=0; divCount=0; editStep=-1;
     }
 };
 
