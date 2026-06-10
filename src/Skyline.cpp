@@ -246,8 +246,11 @@ struct Skyline : Module {
                         case 8:  for(int s=0;s<16;s++) stepCV[selectedChan][s]=0.f; break;
                         case 9:  stepSmooth[selectedChan][seqPos[selectedChan]]=
                                      !stepSmooth[selectedChan][seqPos[selectedChan]]; break;
-                        case 10: for(int s=0;s<seqLength[selectedChan];s++)
-                                     stepCV[selectedChan][s]=random::uniform()*5.f; break;
+                        case 10: {
+                            for(int s=0;s<seqLength[selectedChan];s++)
+                                stepCV[selectedChan][s]=random::uniform()*5.f;
+                            break;
+                        }
                         case 11: frozen[selectedChan]=!frozen[selectedChan]; break;
                         case 12: direction[selectedChan]=0; break;
                         case 13: direction[selectedChan]=1; break;
@@ -273,16 +276,9 @@ struct Skyline : Module {
                 // a specific step (i-8 = steps 0-7, i=8-15 = steps 8-15)
                 // for that channel. If no editChan, does nothing in normal mode.
                 else if (editChan >= 0) {
-                    int targetStep = i - 8;   // bottom row → steps 8-15
-                    // Wait — bottom row i=8-15, i-8=0-7 are steps 0-7?
-                    // No: steps 0-7 = top row buttons 0-7 (channel select)
-                    // steps 8-15 = bottom row buttons 8-15
-                    // So bottom row correctly maps to steps 8-15 for step-lock
-                    // For steps 0-7: editStep follows playhead (editStep=-1)
-                    // For steps 8-15: click bottom button to lock
-                    int stp = i;  // step index 8-15 directly
-                    if (editStep == stp) editStep = -1;
-                    else                editStep = stp;
+                    // Bottom row (i=8-15): lock/unlock step i for editChan
+                    if (editStep == i) editStep = -1;
+                    else               editStep = i;
                 }
             }
         }
@@ -574,13 +570,15 @@ struct SlimFader : app::ParamWidget {
 // EditRingLight — yellow glowing ring drawn around a channel LED
 // ============================================================
 struct EditRingLight : widget::Widget {
-    int lightId = 0;
+    int     lightId  = 0;
+    Module* skyModule = nullptr;   // explicit pointer — widget::Widget has no module member
+
     EditRingLight() { box.size = Vec(22, 22); }
 
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer != 1) return;
-        if (!module) return;
-        float brightness = module->lights[lightId].getBrightness();
+        if (!skyModule) return;
+        float brightness = skyModule->lights[lightId].getBrightness();
         if (brightness <= 0.001f) return;
 
         Vec centre = box.size.div(2.f);
@@ -661,9 +659,9 @@ struct SkylineWidget : ModuleWidget {
 
             // Edit ring (drawn behind channel LED)
             auto* ring = new EditRingLight;
-            ring->module  = module;
-            ring->lightId = Skyline::EDIT_RING_LIGHTS + ch;
-            ring->box.pos = mm2px(Vec(cX[ch],yLed)).minus(ring->box.size.div(2.f));
+            ring->skyModule = module;
+            ring->lightId   = Skyline::EDIT_RING_LIGHTS + ch;
+            ring->box.pos   = mm2px(Vec(cX[ch],yLed)).minus(ring->box.size.div(2.f));
             addChild(ring);
 
             // Channel LED (red, small, on top of ring)
