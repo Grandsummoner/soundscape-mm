@@ -111,6 +111,7 @@ struct Skyline : Module {
     dsp::SchmittTrigger clockTrig, resetTrig, stepTrig[16];
     int   divCount  = 0;
     float glideCV[8]= {};
+    float prevSlider[8] = {-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f}; // slider delta tracking
 
     Skyline() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -172,8 +173,35 @@ struct Skyline : Module {
     void process(const ProcessArgs& args) override {
 
         // ============================================================
-        // 1. MODE LATCHES
+        // 1. MODE LATCHES — exclusive, one active at a time
+        // Read raw param values first
         // ============================================================
+        bool rawMute   = params[MUTE_PARAM].getValue()   > 0.5f;
+        bool rawLength = params[LENGTH_PARAM].getValue()  > 0.5f;
+        bool rawShift  = params[SHIFT_PARAM].getValue()   > 0.5f;
+        bool rawScale  = params[SCALE_PARAM].getValue()   > 0.5f;
+        bool rawSave   = params[SAVE_PARAM].getValue()    > 0.5f;
+        bool rawRecall = params[RECALL_PARAM].getValue()  > 0.5f;
+
+        // Detect which mode was just activated this frame
+        bool muteTrig   = rawMute   && !prevMuteMode;
+        bool lengthTrig = rawLength && !prevLengthMode;
+        bool shiftTrig  = rawShift  && !prevShiftMode;
+        bool scaleTrig  = rawScale  && !prevScaleMode;
+        bool saveTrig   = rawSave   && !prevSaveMode;
+        bool recallTrig = rawRecall && !prevRecallMode;
+
+        // If a NEW mode just activated, force all others off (exclusive)
+        if (muteTrig || lengthTrig || shiftTrig || scaleTrig || saveTrig || recallTrig) {
+            if (!muteTrig)   params[MUTE_PARAM].setValue(0.f);
+            if (!lengthTrig) params[LENGTH_PARAM].setValue(0.f);
+            if (!shiftTrig)  params[SHIFT_PARAM].setValue(0.f);
+            if (!scaleTrig)  params[SCALE_PARAM].setValue(0.f);
+            if (!saveTrig)   params[SAVE_PARAM].setValue(0.f);
+            if (!recallTrig) params[RECALL_PARAM].setValue(0.f);
+        }
+
+        // Re-read after exclusive enforcement
         muteMode   = params[MUTE_PARAM].getValue()   > 0.5f;
         lengthMode = params[LENGTH_PARAM].getValue()  > 0.5f;
         shiftMode  = params[SHIFT_PARAM].getValue()   > 0.5f;
@@ -281,21 +309,32 @@ struct Skyline : Module {
             else {
                 // Normal mode — step buttons select which step to edit
                 // editChan stays fixed (only changes via double-click)
-                // selectedChan always mirrors editChan for display consistency
                 if (i < 8) {
-                    editStep = i;       // top row = steps 0-7
+                    if (editStep != i) { editStep = i; prevSlider[editChan] = -1.f; }
                 } else {
-                    editStep = i;       // bottom row = steps 8-15
+                    if (editStep != i) { editStep = i; prevSlider[editChan] = -1.f; }
                 }
             }
         }
 
         // ============================================================
-        // 3. EDIT MODE — slider of editChan writes to editStep
-        // editChan and editStep are always valid (>= 0).
+        // 3. EDIT MODE — slider writes to stepCV[editChan][editStep]
+        //    ONLY when the slider has actually moved since last frame.
+        //    This keeps each step's CV independent — advancing the
+        //    playhead to a new step does NOT overwrite it with the
+        //    current slider position.
         // ============================================================
         if (noMode) {
-            stepCV[editChan][editStep] = params[SLIDER_PARAMS + editChan].getValue();
+            float sv = params[SLIDER_PARAMS + editChan].getValue();
+            if (prevSlider[editChan] < 0.f)
+                prevSlider[editChan] = sv;  // first frame: initialise, don't write
+            else if (std::abs(sv - prevSlider[editChan]) > 0.001f) {
+                stepCV[editChan][editStep] = sv;
+                prevSlider[editChan] = sv;
+            }
+        } else {
+            // Reset prevSlider when leaving noMode so re-entry doesn't skip first move
+            for (int ch = 0; ch < 8; ch++) prevSlider[ch] = -1.f;
         }
 
         // ============================================================
@@ -628,8 +667,9 @@ struct ChannelStepButton : VCVLightButton<MediumSimpleLight<RedLight>> {
         // Double-clicking the currently glowing channel is ignored —
         // there must always be exactly one channel in edit.
         if (m->editChan != chanIndex) {
+            m->prevSlider[chanIndex] = -1.f;  // reset delta for new channel
             m->editChan = chanIndex;
-            m->editStep = 0;    // reset to step 1 when entering new channel
+            m->editStep = 0;
             m->selectedChan = chanIndex;
         }
         // Same channel double-click: do nothing
@@ -683,13 +723,13 @@ struct SkylineWidget : ModuleWidget {
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(xK2,yKnob)),module,Skyline::ATTENUATE_PARAM));
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(xK3,yKnob)),module,Skyline::DIVIDE_PARAM));
 
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedLight>>>(
+        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(xB1,yB1)),module,Skyline::MUTE_PARAM,  Skyline::MUTE_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<YellowLight>>>(
+        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(xB2,yB1)),module,Skyline::LENGTH_PARAM,Skyline::LENGTH_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<YellowLight>>>(
+        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(xB3,yB1)),module,Skyline::SHIFT_PARAM, Skyline::SHIFT_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<YellowLight>>>(
+        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(xB1,yB2)),module,Skyline::SCALE_PARAM, Skyline::SCALE_LIGHT));
         addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<GreenLight>>>(
             mm2px(Vec(xB2,yB2)),module,Skyline::SAVE_PARAM,  Skyline::SAVE_LIGHT));
