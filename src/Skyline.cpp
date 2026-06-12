@@ -127,7 +127,7 @@ struct Skyline : Module {
         configButton(SAVE_PARAM,  "Save");
         configButton(RECALL_PARAM,"Recall");
         for (int i=0;i<8;i++) {
-            configParam(SLIDER_PARAMS+i,0.f,5.f,0.f,string::f("Ch %d Slider",i+1)," V");
+            configParam(SLIDER_PARAMS+i,0.f,4.f,0.f,string::f("Ch %d Slider",i+1)," V");
             configOutput(CV_OUTPUTS+i,string::f("Ch %d CV",i+1));
         }
         for (int i=0;i<16;i++)
@@ -215,11 +215,13 @@ struct Skyline : Module {
         // Entering a mode suspends step editing (editStep stays for return)
         // editChan is NEVER cleared — always one channel is active
 
-        // LENGTH snapshot
-        if (!prevLengthMode && lengthMode)
-            for(int ch=0;ch<8;ch++) lengthSliderSnapshot[ch]=params[SLIDER_PARAMS+ch].getValue();
+        // LENGTH snapshot: capture editChan's slider on latch
+        // Re-snap if editChan changes while LENGTH is active
+        bool lengthChanChanged = lengthMode && (editChan != prevSelectedChan);
+        if ((!prevLengthMode && lengthMode) || lengthChanChanged)
+            lengthSliderSnapshot[editChan] = params[SLIDER_PARAMS + editChan].getValue();
         if (prevLengthMode && !lengthMode)
-            for(int ch=0;ch<8;ch++) lengthSliderSnapshot[ch]=-1.f;
+            for(int ch=0;ch<8;ch++) lengthSliderSnapshot[ch] = -1.f;
 
         // SCALE snapshot (re-snap on channel change too)
         bool scaleChChanged = scaleMode && (editChan != prevSelectedChan);
@@ -338,17 +340,16 @@ struct Skyline : Module {
         }
 
         // ============================================================
-        // 4. LENGTH MODE — slider sets per-channel length (with deadband)
+        // 4. LENGTH MODE — slider of editChan sets that channel's length
+        // Only editChan is affected — other channels independent.
         // ============================================================
         if (lengthMode) {
-            for (int ch=0;ch<8;ch++) {
-                float sv   = params[SLIDER_PARAMS+ch].getValue();
-                float snap = lengthSliderSnapshot[ch];
-                if (snap < 0.f || std::abs(sv-snap) > LENGTH_DEADBAND) {
-                    int newLen = clamp((int)(sv/5.0f*16.f)+1,1,16);
-                    seqLength[ch] = newLen;
-                    if (seqPos[ch] >= seqLength[ch]) seqPos[ch] = 0;
-                }
+            float sv   = params[SLIDER_PARAMS + editChan].getValue();
+            float snap = lengthSliderSnapshot[editChan];
+            if (snap < 0.f || std::abs(sv - snap) > LENGTH_DEADBAND) {
+                int newLen = clamp((int)(sv / 4.0f * 16.f) + 1, 1, 16);
+                seqLength[editChan] = newLen;
+                if (seqPos[editChan] >= seqLength[editChan]) seqPos[editChan] = 0;
             }
         }
 
@@ -359,7 +360,7 @@ struct Skyline : Module {
             float sv   = params[SLIDER_PARAMS+editChan].getValue();
             float snap = scaleSliderSnapshot;
             if (snap < 0.f || std::abs(sv-snap) > SCALE_DEADBAND)
-                scaleIndex[editChan] = clamp((int)(sv/5.0f*15.5f),0,15);
+                scaleIndex[editChan] = clamp((int)(sv / 4.0f * 15.5f), 0, 15);
         }
 
         // ============================================================
@@ -396,10 +397,13 @@ struct Skyline : Module {
         if (clocked) {
             for(int ch=0;ch<8;ch++){
                 if(frozen[ch]) continue;
-                // Live record: write before advancing (opt-in per channel)
                 if (noMode && liveRecord[ch])
                     stepCV[ch][seqPos[ch]]=params[SLIDER_PARAMS+ch].getValue();
                 advanceChannel(ch);
+                // Reset prevSlider on every step advance for editChan so that
+                // direction reversals and any seqPos jump never leave the slider
+                // stuck — first move after advance always registers
+                if (ch == editChan) prevSlider[editChan] = -1.f;
             }
         }
 
@@ -421,7 +425,7 @@ struct Skyline : Module {
             }
             float v=stepCV[ch][pos];
             if(scaleIndex[ch]>0&&scaleIndex[ch]<15)
-                v=quantizeVoltage(v/5.0f,scaleIndex[ch])*5.0f;
+                v=quantizeVoltage(v/4.0f,scaleIndex[ch])*4.0f;
             if(stepSmooth[ch][pos]){
                 float rate=1.0f/(args.sampleRate*0.05f);
                 glideCV[ch]+=(v-glideCV[ch])*rate;
