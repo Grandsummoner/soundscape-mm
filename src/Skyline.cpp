@@ -372,7 +372,7 @@ struct Skyline : Module {
         // ============================================================
         if (noMode) {
             float sv = params[SLIDER_PARAMS + editChan].getValue();
-            if (std::abs(sv - prevSlider[editChan]) > 0.001f) {
+            if (std::abs(sv - prevSlider[editChan]) > 0.0001f) {
                 int targetStep = editStepLocked ? editStep : seqPos[editChan];
                 stepCV[editChan][targetStep] = sv;
                 prevSlider[editChan] = sv;
@@ -718,8 +718,11 @@ struct SlimFader : app::ParamWidget {
     }
     void onDragMove(const DragMoveEvent& e) override {
         if(!dragging||!getParamQuantity()) return;
-        float delta=-e.mouseDelta.y/(float)TH;
-        dragStartVal=clamp(dragStartVal+delta,0.f,1.f);
+        // Divide by TH/2 instead of TH for 2× sensitivity
+        // User can hold Ctrl for fine control (standard VCV behaviour)
+        float sensitivity = (APP->window->getMods() & RACK_MOD_CTRL) ? (float)TH*4 : (float)TH/2;
+        float delta = -e.mouseDelta.y / sensitivity;
+        dragStartVal = clamp(dragStartVal + delta, 0.f, 1.f);
         getParamQuantity()->setScaledValue(dragStartVal);
     }
     void onDoubleClick(const DoubleClickEvent& e) override {
