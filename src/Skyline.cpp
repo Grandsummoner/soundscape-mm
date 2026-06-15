@@ -137,7 +137,7 @@ struct Skyline : Module {
     dsp::SchmittTrigger clockTrig, resetTrig, stepTrig[16];
     int   divCount  = 0;
     float glideCV[8]= {};
-    float prevSlider[8] = {-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f}; // slider delta tracking
+    float prevSlider[8] = {0.f,0.f,0.f,0.f,0.f,0.f,0.f,0.f}; // slider delta tracking
 
     Skyline() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -176,14 +176,19 @@ struct Skyline : Module {
         }
     }
 
+    // Preset divide storage (one per slot)
+    float presetDivide[16] = {1.f,1.f,1.f,1.f,1.f,1.f,1.f,1.f,
+                               1.f,1.f,1.f,1.f,1.f,1.f,1.f,1.f};
+
     void savePreset(int slot) {
         for(int ch=0;ch<8;ch++){
             for(int s=0;s<16;s++) presetCV[slot][ch][s]=stepCV[ch][s];
-            presetLen[slot][ch]=seqLength[ch];
+            presetLen[slot][ch]  =seqLength[ch];
             presetScale[slot][ch]=scaleIndex[ch];
-            presetDir[slot][ch]=direction[ch];
+            presetDir[slot][ch]  =direction[ch];
         }
-        presetValid[slot]=true;
+        presetDivide[slot] = params[DIVIDE_PARAM].getValue();
+        presetValid[slot]  = true;
     }
     void recallPreset(int slot) {
         if(!presetValid[slot]) return;
@@ -192,12 +197,11 @@ struct Skyline : Module {
             seqLength[ch] =presetLen[slot][ch];
             scaleIndex[ch]=presetScale[slot][ch];
             direction[ch] =presetDir[slot][ch];
-            // Clamp seqPos only if genuinely out of bounds — do NOT reset to 0.
-            // Letting the sequence continue from its current position avoids
-            // the audible pause/jump that a hard reset causes.
             if(seqPos[ch] >= seqLength[ch])
                 seqPos[ch] = seqLength[ch] - 1;
         }
+        params[DIVIDE_PARAM].setValue(presetDivide[slot]);
+        divCount = 0; // reset divide counter so new division starts cleanly
     }
 
     void process(const ProcessArgs& args) override {
@@ -352,40 +356,31 @@ struct Skyline : Module {
                     // Same step: unlock, go back to live record
                     editStepLocked = false;
                     editStep = seqPos[editChan];
-                    prevSlider[editChan] = -1.f;
                 } else {
                     // Different step or not locked: lock to this step
                     editStep = i;
                     editStepLocked = true;
-                    prevSlider[editChan] = -1.f;
                 }
             }
         }
 
         // ============================================================
         // 3. EDIT MODE — slider writes to editChan's CV
-        //
-        // OG behaviour: wiggling slider while playhead moves writes to
-        // the CURRENT PLAYING STEP (live recording).
-        //
-        // Our addition: if user has clicked a step button (editStep >= 0
-        // and != seqPos[editChan]), writes go to that locked step instead.
-        //
-        // Only writes when slider actually moves (delta > threshold) so
-        // advancing to a new step never overwrites its stored value.
+        // Always tracks slider position. Writes to current playing step
+        // (OG live record) unless editStepLocked, then writes to locked step.
+        // No forced prevSlider resets — continuous tracking.
         // ============================================================
         if (noMode) {
             float sv = params[SLIDER_PARAMS + editChan].getValue();
-            if (prevSlider[editChan] < 0.f) {
-                prevSlider[editChan] = sv;
-            } else if (std::abs(sv - prevSlider[editChan]) > 0.001f) {
-                // OG behaviour: write to current playing step unless locked
+            if (std::abs(sv - prevSlider[editChan]) > 0.001f) {
                 int targetStep = editStepLocked ? editStep : seqPos[editChan];
                 stepCV[editChan][targetStep] = sv;
                 prevSlider[editChan] = sv;
             }
         } else {
-            for (int ch = 0; ch < 8; ch++) prevSlider[ch] = -1.f;
+            // Update prevSlider while in mode so re-entry doesn't see stale delta
+            for (int ch = 0; ch < 8; ch++)
+                prevSlider[ch] = params[SLIDER_PARAMS + ch].getValue();
         }
 
         // ============================================================
@@ -449,10 +444,10 @@ struct Skyline : Module {
                 if (noMode && liveRecord[ch])
                     stepCV[ch][seqPos[ch]]=params[SLIDER_PARAMS+ch].getValue();
                 advanceChannel(ch);
-                if (ch == editChan) {
-                    prevSlider[editChan] = -1.f;
-                    if (!editStepLocked) editStep = seqPos[editChan]; // follow playhead
-                }
+                // When editChan advances to a new step, reset prevSlider
+                // so the first slider move on the new step is clean
+                if (ch == editChan && !editStepLocked)
+                    editStep = seqPos[editChan];
             }
         }
 
@@ -642,6 +637,9 @@ struct Skyline : Module {
         arrF("liveRecord",[&](json_t* a){
             for(int ch=0;ch<8;ch++) json_array_append_new(a,json_boolean(liveRecord[ch]));
         });
+        arrF("presetDivide",[&](json_t* a){
+            for(int s=0;s<16;s++) json_array_append_new(a,json_real(presetDivide[s]));
+        });
         json_object_set_new(root,"selectedChan",json_integer(selectedChan));
         json_object_set_new(root,"divideParam",json_real(params[DIVIDE_PARAM].getValue()));
         return root;
@@ -659,7 +657,8 @@ struct Skyline : Module {
         for(int ch=0;ch<8;ch++) scaleIndex[ch] =getI("scaleIndex",ch);
         for(int ch=0;ch<8;ch++) chanMuted[ch]  =getB("chanMuted",ch);
         for(int ch=0;ch<8;ch++) frozen[ch]      =getB("frozen",ch);
-        for(int ch=0;ch<8;ch++) liveRecord[ch]  =getB("liveRecord",ch);
+        for(int ch=0;ch<8;ch++) liveRecord[ch] =getB("liveRecord",ch);
+        for(int s=0;s<16;s++)  presetDivide[s]=getF("presetDivide",s);
         idx=0; for(int ch=0;ch<8;ch++) for(int s=0;s<16;s++) stepMuted[ch][s] =getB("stepMuted",idx++);
         idx=0; for(int ch=0;ch<8;ch++) for(int s=0;s<16;s++) stepSmooth[ch][s]=getB("stepSmooth",idx++);
         json_t* sc=json_object_get(root,"selectedChan");
@@ -791,11 +790,13 @@ struct ChannelStepButton : VCVLightButton<MediumSimpleLight<RedGreenBlueLight>> 
         // Double-clicking the currently glowing channel is ignored —
         // there must always be exactly one channel in edit.
         if (m->editChan != chanIndex) {
-            m->prevSlider[chanIndex] = -1.f;
             m->editChan       = chanIndex;
             m->editStep       = 0;
-            m->editStepLocked = false;  // return to live record on channel switch
+            m->editStepLocked = false;
             m->selectedChan   = chanIndex;
+            // Sync to current slider so first wiggle is detected correctly
+            m->prevSlider[chanIndex] =
+                m->params[Skyline::SLIDER_PARAMS + chanIndex].getValue();
         }
         // Same channel double-click: do nothing
         e.consume(this);
