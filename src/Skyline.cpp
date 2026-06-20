@@ -800,7 +800,7 @@ struct SkylineWidget : ModuleWidget {
         lbl(xK1,38.5f,"OFFSET",7.5f); lbl(xK2,38.5f,"ATTEN",7.5f); lbl(xK3,38.5f,"DIVIDE",7.5f);
         lbl(xB1,38.5f,"MUTE",7.5f); lbl(xB2,38.5f,"LEN",7.5f); lbl(xB3,38.5f,"SHIFT",7.5f);
         lbl(xB1,54.5f,"SCALE",7.5f); lbl(xB2,54.5f,"SAVE",7.5f); lbl(xB3,54.5f,"RECALL",7.5f);
-        const char* fn[8],"CLEAR","SMOOTH","RND","FREEZE","FWD","REV","PEND","RNDSEQ"};
+        const char* fn[8] = {"CLEAR","SMOOTH","RND","FREEZE","FWD","REV","PEND","RNDSEQ"};
         for(int i=0;i<8;i++) lbl(cX[i],ySLbl,fn[i],7.f);
     }
 };
