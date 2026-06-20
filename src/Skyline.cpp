@@ -165,7 +165,7 @@ struct Skyline : Module {
             case 1: seqPos[ch]=(seqPos[ch]-1+len)%len; break;
             case 2:
                 seqPos[ch]+=pendDir[ch];
-                if(seqPos[ch]>=len-1){seqPos[ch]=len-1;pendDir[ch]-1;}
+                if(seqPos[ch]>=len-1){seqPos[ch]=len-1;pendDir[ch]=-1;}
                 if(seqPos[ch]<=0)   {seqPos[ch]=0;     pendDir[ch]= 1;}
                 break;
             case 3: seqPos[ch]=(int)(random::uniform()*len); break;
@@ -621,8 +621,9 @@ struct SlimFader : app::ParamWidget {
     int  chanIndex=-1;
     Skyline* skyModule=nullptr;
     SlimFader(){box.size=Vec(HW,TH+HH);}
-    void drawLayer(const DrawArgs& args,int layer) override {
-        if(layer!=1) return;
+    
+    // CHANGED TO STANDARD DRAW() TO COMPLY WITH METAMODULE DISPLAY LIMITS
+    void draw(const DrawArgs& args) override {
         float fillVal=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
         float handleY=(1.f-fillVal)*TH, tx=(box.size.x-TW)*0.5f;
 
@@ -677,8 +678,8 @@ struct EditRingLight : widget::Widget {
 
     EditRingLight() { box.size = Vec(22, 22); }
 
-    void drawLayer(const DrawArgs& args, int layer) override {
-        if (layer != 1) return;
+    // CHANGED TO STANDARD DRAW() TO COMPLY WITH METAMODULE DISPLAY LIMITS
+    void draw(const DrawArgs& args) override {
         if (!skyModule) return;
         float brightness = skyModule->lights[lightId].getBrightness();
         if (brightness <= 0.001f) return;
