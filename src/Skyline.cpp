@@ -629,27 +629,20 @@ struct Skyline : Module {
 };
 
 // ============================================================
-// SlimFader — extends SvgSlider so the VCV-to-MetaModule element
-// translator recognizes it as a "Slider" element, but never loads
-// an SVG at runtime (the firmware has no SVG parser). The custom
-// drawLayer below only paints on the desktop VCV build; on
-// hardware, Param widgets are drawn natively by the engine.
+// SlimFader — self-drawn ParamWidget, no runtime SVG loading.
+// IMPORTANT: do not change this to extend app::SvgSlider. SvgSlider's
+// handle/track state is normally initialized inside setTrackSvg /
+// setHandleSvg when real SVG data loads; skipping those calls leaves
+// that state uninitialized, and something downstream dereferences it
+// without a null-check — this hung the module entirely on hardware.
+// Bare ParamWidget has no such hidden dependency and is confirmed safe.
 // ============================================================
-struct SlimFader : app::SvgSlider {
+struct SlimFader : app::ParamWidget {
     static const int TW=6,TH=60,HW=14,HH=8;
     bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
     int  chanIndex=-1;          // which channel this slider belongs to
     Skyline* skyModule=nullptr; // for reading editChan / mode state
-    SlimFader(){
-        // Deliberately never call setTrackSvg/setHandleSvg: those parse
-        // SVG files at runtime via Xml::load, which the MetaModule
-        // firmware doesn't support. Extending SvgSlider (rather than
-        // bare ParamWidget) is what lets the VCV-to-MetaModule element
-        // translator recognize this as a "Slider" element at all —
-        // box.size is set manually here since it's never set by an
-        // SVG load.
-        box.size=Vec(HW,TH+HH);
-    }
+    SlimFader(){box.size=Vec(HW,TH+HH);}
     void drawLayer(const DrawArgs& args,int layer) override {
         if(layer!=1) return;
         float val=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
