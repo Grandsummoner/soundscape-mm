@@ -71,7 +71,6 @@ struct Skyline : Module {
     }
     void clearRGB(int baseId) { setRGB(baseId, 0.f, 0.f, 0.f); }
 
-    // Struct optimized to avoid C++11 aggregate initialization issues
     struct SaveAnimation {
         bool  active    = false;
         int   slot      = -1;
@@ -807,94 +806,7 @@ struct SkylineWidget : ModuleWidget {
         const char* fn[8] = {"CLEAR","SMOOTH","RND","FREEZE","FWD","REV","PEND","RNDSEQ"};
         for(int i=0;i<8;i++) lbl(cX[i],ySLbl,fn[i],7.f);
     }
-
-    // CENTRALIZED DRAWING METHOD: GUARANTEED TO BE EXECUTED NATIVELY BY THE METAMODULE DISPLAY GRAPHICS
-    void draw(const DrawArgs& args) override {
-        // Draw the background panel PNG first
-        ModuleWidget::draw(args);
-
-        // Get pointer to our module
-        Skyline* skyModule = dynamic_cast<Skyline*>(module);
-        if (!skyModule) return;
-
-        const float cX[8]={7.00f,19.51f,32.03f,44.54f,57.06f,69.57f,82.09f,94.60f};
-        const float ySld=70.0f, yLed=31.0f;
-        const int TW=6,TH=60,HW=14,HH=8;
-
-        // 1. Draw glowing Edit Ring around the active channel LED
-        float brightness = skyModule->lights[Skyline::EDIT_RING_LIGHTS + skyModule->editChan].getBrightness();
-        if (brightness > 0.001f) {
-            Vec ledPos = mm2px(Vec(cX[skyModule->editChan], yLed));
-            float r = 9.5f;
-            const float NR = 0.1f, NG = 0.25f, NB = 0.6f;
-
-            NVGpaint glow = nvgRadialGradient(args.vg,
-                ledPos.x, ledPos.y, r * 0.7f, r * 1.6f,
-                nvgRGBAf(NR, NG, NB, brightness * 0.55f),
-                nvgRGBAf(NR, NG, NB, 0.f));
-            nvgBeginPath(args.vg);
-            nvgCircle(args.vg, ledPos.x, ledPos.y, r * 1.6f);
-            nvgFillPaint(args.vg, glow);
-            nvgFill(args.vg);
-
-            nvgBeginPath(args.vg);
-            nvgCircle(args.vg, ledPos.x, ledPos.y, r);
-            nvgStrokeColor(args.vg, nvgRGBAf(NR, NG, NB, brightness * 0.9f));
-            nvgStrokeWidth(args.vg, 1.8f);
-            nvgStroke(args.vg);
-        }
-
-        // 2. Draw fader tracks, fill levels, and grips
-        for (int ch = 0; ch < 8; ch++) {
-            float fillVal = skyModule->params[Skyline::SLIDER_PARAMS + ch].getValue(); // read value (0-4V)
-            fillVal = fillVal / 4.f; // scale 0-4V to 0-1
-            float faderX = cX[ch];
-            
-            // Convert coordinate center to pixels
-            Vec faderPos = mm2px(Vec(faderX, ySld));
-            
-            // Draw fader track (grey background)
-            float tx = faderPos.x - TW*0.5f;
-            float ty = faderPos.y;
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, tx, ty, TW, TH, 3.f);
-            nvgFillColor(args.vg, nvgRGB(0xb8,0xb5,0xae));
-            nvgFill(args.vg);
-
-            // Draw target navy blue highlight if in edit mode
-            bool isTarget = ch == skyModule->editChan &&
-                (skyModule->muteMode || skyModule->lengthMode ||
-                 skyModule->scaleMode || skyModule->shiftMode);
-            if (isTarget) {
-                nvgBeginPath(args.vg);
-                nvgRoundedRect(args.vg, tx-3.f, ty-3.f, TW+6.f, TH+6.f, 5.f);
-                nvgFillColor(args.vg, nvgRGBAf(0.1f,0.25f,0.6f,0.35f));
-                nvgFill(args.vg);
-            }
-
-            // Draw red active fill bar
-            float handleY = (1.f - fillVal) * TH;
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, tx, ty + handleY, TW, TH - handleY);
-            nvgFillColor(args.vg, nvgRGB(0x99,0x20,0x20));
-            nvgFill(args.vg);
-
-            // Draw fader handle (dark grey grip with silver center line)
-            float hx = faderPos.x - HW*0.5f;
-            float hy = ty + handleY - HH*0.5f;
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, hx, hy, HW, HH, 2.f);
-            nvgFillColor(args.vg, nvgRGB(0x30,0x30,0x30));
-            nvgFill(args.vg);
-            
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, hx + 2.f, hy + HH*0.5f);
-            nvgLineTo(args.vg, hx + HW - 2.f, hy + HH*0.5f);
-            nvgStrokeColor(args.vg, nvgRGB(0x80,0x80,0x80));
-            nvgStrokeWidth(args.vg, 1.f);
-            nvgStroke(args.vg);
-        }
-    }
 };
 
-Model* modelSkyline = createModel<Skyline, SkylineWidget>("Skyline");
+// FIXED MODEL SLUG TO MATCH THE NEW plugin.json "SkylineMM" EXPECTED BY THE HARDWARE
+Model* modelSkyline = createModel<Skyline, SkylineWidget>("SkylineMM");
