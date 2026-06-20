@@ -58,7 +58,13 @@ jobs:
           # Get the SDK:
           git clone -b ${{ inputs.SDK_branch }} https://github.com/4ms/metamodule-plugin-sdk --recursive ${{ github.workspace }}/metamodule-plugin-sdk
           
-          # Build the plugin:
+          # 1. Install CairoSVG dependencies for python conversion
+          pip3 install cairosvg
+          
+          # 2. Run the 4ms SvgToPng tool to generate assets/Skyline.png
+          python3 ${{ github.workspace }}/metamodule-plugin-sdk/scripts/SvgToPng.py --input ${{ github.workspace }}/res/Skyline.svg --output ${{ github.workspace }}/assets/ --white --height 240
+          
+          # 3. Build the plugin (CMake will now pack assets/Skyline.png automatically)
           cmake -B build -G Ninja -DMETAMODULE_SDK_DIR=${{ github.workspace }}/metamodule-plugin-sdk
           cmake --build build
           
