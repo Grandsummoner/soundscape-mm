@@ -54,6 +54,7 @@ struct Skyline : Module {
         ENUMS(STEP_LIGHTS,     16*3),  // playhead (RGB)
         ENUMS(BUTTON_LIGHTS,   16*3),  // button LED (RGB)
         ENUMS(CHANNEL_LIGHTS,   8*3),  // channel output LED (RGB)
+        ENUMS(EDIT_RING_LIGHTS,  8),   // glow ring showing the MUTE/LENGTH/SCALE/SHIFT target channel
         ENUMS(MUTE_LIGHT,   3),        // latch button LEDs (RGB)
         ENUMS(LENGTH_LIGHT, 3),
         ENUMS(SHIFT_LIGHT,  3),
@@ -100,6 +101,7 @@ struct Skyline : Module {
     int   selectedChan      = 0;
     int   editChan          = 0;
     int   globalStep         = -1;
+    float glowPhase          = 0.f;   // animation phase for the edit-target glow ring
 
     float lengthSliderSnapshot[8] = {-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f};
     float scaleSliderSnapshot     = -1.f;
@@ -519,6 +521,11 @@ struct Skyline : Module {
         glowPhase += args.sampleTime * 1.5f;
         if (glowPhase > 2.f * M_PI) glowPhase -= 2.f * M_PI;
         float glow = 0.45f + 0.45f * std::sin(glowPhase);
+        // Edit-ring lights: glow on whichever channel is the current
+        // MUTE/LENGTH/SCALE/SHIFT target
+        for (int ch = 0; ch < 8; ch++)
+            lights[EDIT_RING_LIGHTS + ch].setBrightness(ch == editChan ? glow : 0.f);
+
         // Custom display update logic
     }
 
@@ -622,16 +629,101 @@ struct Skyline : Module {
 };
 
 // ============================================================
-// SkylineFader (STANDARD SvgSlider IMPLEMENTATION NATIVELY RENDERED BY THE METAMODULE)
+// SlimFader — self-drawn ParamWidget, no runtime SVG loading.
+// The MetaModule engine draws its own native chrome for any
+// Param widget regardless of this drawLayer code, so this is
+// safe on hardware; it's the Xml::load()-based SvgSlider that
+// isn't, since the firmware has no SVG parser at runtime.
 // ============================================================
-struct SkylineFader : app::SvgSlider {
-    SkylineFader() {
-        // We use the core VCV Rack fader graphics.
-        // Because these are part of the VCV core SDK, the MetaModule has their 
-        // graphic assets fully built-in, making them 100% crash-proof and 
-        // natively drawn on the screen!
-        setTrackSvg(Xml::load(asset::sys("res/ComponentLibrary/VCVFader.svg")));
-        setHandleSvg(Xml::load(asset::sys("res/ComponentLibrary/VCVFaderHandle.svg")));
+struct SlimFader : app::ParamWidget {
+    static const int TW=6,TH=60,HW=14,HH=8;
+    bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
+    int  chanIndex=-1;          // which channel this slider belongs to
+    Skyline* skyModule=nullptr; // for reading editChan / mode state
+    SlimFader(){box.size=Vec(HW,TH+HH);}
+    void drawLayer(const DrawArgs& args,int layer) override {
+        if(layer!=1) return;
+        float val=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
+        float handleY=(1.f-val)*TH, tx=(box.size.x-TW)*0.5f;
+
+        bool isTarget = skyModule && chanIndex >= 0 && chanIndex == skyModule->editChan &&
+            (skyModule->muteMode || skyModule->lengthMode ||
+             skyModule->scaleMode || skyModule->shiftMode);
+        if (isTarget) {
+            nvgBeginPath(args.vg);
+            nvgRoundedRect(args.vg, tx-3.f, HH*0.5f-3.f, TW+6.f, TH+6.f, 5.f);
+            nvgFillColor(args.vg, nvgRGBAf(0.1f,0.25f,0.6f,0.35f));
+            nvgFill(args.vg);
+        }
+
+        nvgBeginPath(args.vg); nvgRoundedRect(args.vg,tx,HH*0.5f,TW,TH,3.f);
+        nvgFillColor(args.vg,nvgRGB(0xb8,0xb5,0xae)); nvgFill(args.vg);
+        nvgBeginPath(args.vg); nvgRect(args.vg,tx,HH*0.5f+handleY,TW,TH-handleY);
+        nvgFillColor(args.vg,nvgRGB(0x99,0x20,0x20)); nvgFill(args.vg);
+        float hx=(box.size.x-HW)*0.5f;
+        nvgBeginPath(args.vg); nvgRoundedRect(args.vg,hx,handleY,HW,HH,2.f);
+        nvgFillColor(args.vg,nvgRGB(0x30,0x30,0x30)); nvgFill(args.vg);
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg,hx+2.f,handleY+HH*0.5f); nvgLineTo(args.vg,hx+HW-2.f,handleY+HH*0.5f);
+        nvgStrokeColor(args.vg,nvgRGB(0x80,0x80,0x80)); nvgStrokeWidth(args.vg,1.f); nvgStroke(args.vg);
+    }
+    void onButton(const ButtonEvent& e) override {
+        if(e.action==GLFW_PRESS&&e.button==GLFW_MOUSE_BUTTON_LEFT){
+            dragging=true; dragStartY=e.pos.y;
+            dragStartVal=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
+            e.consume(this);
+        }
+        if(e.action==GLFW_RELEASE) dragging=false;
+        ParamWidget::onButton(e);
+    }
+    void onDragMove(const DragMoveEvent& e) override {
+        if(!dragging||!getParamQuantity()) return;
+        float sensitivity = (APP->window->getMods() & RACK_MOD_CTRL) ? (float)TH*4 : (float)TH/2;
+        float delta = -e.mouseDelta.y / sensitivity;
+        dragStartVal = clamp(dragStartVal + delta, 0.f, 1.f);
+        getParamQuantity()->setScaledValue(dragStartVal);
+    }
+    void onDoubleClick(const DoubleClickEvent& e) override {
+        if(getParamQuantity()) getParamQuantity()->reset();
+    }
+};
+
+// ============================================================
+// EditRingLight — glowing ring drawn around a channel LED,
+// showing which channel MUTE/LENGTH/SCALE/SHIFT currently target.
+// Not a Param/Jack/Light subclass, so its NanoVG draw isn't
+// substituted by the MetaModule engine's native rendering.
+// ============================================================
+struct EditRingLight : widget::Widget {
+    int     lightId  = 0;
+    Module* skyModule = nullptr;
+
+    EditRingLight() { box.size = Vec(22, 22); }
+
+    void drawLayer(const DrawArgs& args, int layer) override {
+        if (layer != 1) return;
+        if (!skyModule) return;
+        float brightness = skyModule->lights[lightId].getBrightness();
+        if (brightness <= 0.001f) return;
+
+        Vec centre = box.size.div(2.f);
+        float r = 9.5f;
+        const float NR = 0.1f, NG = 0.25f, NB = 0.6f;
+
+        NVGpaint glow = nvgRadialGradient(args.vg,
+            centre.x, centre.y, r * 0.7f, r * 1.6f,
+            nvgRGBAf(NR, NG, NB, brightness * 0.55f),
+            nvgRGBAf(NR, NG, NB, 0.f));
+        nvgBeginPath(args.vg);
+        nvgCircle(args.vg, centre.x, centre.y, r * 1.6f);
+        nvgFillPaint(args.vg, glow);
+        nvgFill(args.vg);
+
+        nvgBeginPath(args.vg);
+        nvgCircle(args.vg, centre.x, centre.y, r);
+        nvgStrokeColor(args.vg, nvgRGBAf(NR, NG, NB, brightness * 0.9f));
+        nvgStrokeWidth(args.vg, 1.8f);
+        nvgStroke(args.vg);
     }
 };
 
@@ -655,6 +747,12 @@ struct SkylineWidget : ModuleWidget {
         for(int ch=0;ch<8;ch++){
             addOutput(createOutputCentered<PJ301MPort>(
                 mm2px(Vec(cX[ch],yOut)),module,Skyline::CV_OUTPUTS+ch));
+
+            auto* ring = new EditRingLight;
+            ring->skyModule = module;
+            ring->lightId   = Skyline::EDIT_RING_LIGHTS + ch;
+            ring->box.pos   = mm2px(Vec(cX[ch],yLed)).minus(ring->box.size.div(2.f));
+            addChild(ring);
 
             addChild(createLightCentered<SmallLight<RedGreenBlueLight>>(
                 mm2px(Vec(cX[ch],yLed)),module,Skyline::CHANNEL_LIGHTS+ch*3));
@@ -683,8 +781,11 @@ struct SkylineWidget : ModuleWidget {
         // REGISTER SLIDERS NATIVELY AS VCV SvgSliders (THE EXACT PATTERN USED BY BEFACO, VOSTOK & JW MODULES)
         // This is 100% crash-proof and guaranteed to map and render on the screen!
         for(int ch=0;ch<8;ch++){
-            auto* slider = createParamCentered<SkylineFader>(mm2px(Vec(cX[ch], ySld + 30.f)), module, Skyline::SLIDER_PARAMS + ch);
-            addParam(slider);
+            auto* sf = createParam<SlimFader>(
+                mm2px(Vec(cX[ch]-2.37f,ySld)),module,Skyline::SLIDER_PARAMS+ch);
+            sf->chanIndex  = ch;
+            sf->skyModule  = module;
+            addParam(sf);
         }
 
         for(int i=0;i<8;i++){
