@@ -165,7 +165,7 @@ struct Skyline : Module {
             case 1: seqPos[ch]=(seqPos[ch]-1+len)%len; break;
             case 2:
                 seqPos[ch]+=pendDir[ch];
-                if(seqPos[ch]>=len-1){seqPos[ch]=len-1;pendDir[ch]=-1;}
+                if(seqPos[ch]>=len-1){seqPos[ch]=len-1;pendDir[ch] = -1;} // FIXED ASSIGNMENT
                 if(seqPos[ch]<=0)   {seqPos[ch]=0;     pendDir[ch]= 1;}
                 break;
             case 3: seqPos[ch]=(int)(random::uniform()*len); break;
