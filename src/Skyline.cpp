@@ -41,7 +41,6 @@ static float quantizeVoltage(float v, int scaleIdx) {
 // ============================================================
 struct Skyline : Module {
 // ============================================================
-    // REVERTED TO ORIGINAL WORKING DESKTOP ENUM ORDER FOR STABLE HARDWARE INITIALIZATION
     enum ParamIds {
         DIVIDE_PARAM, ATTENUATE_PARAM, OFFSET_PARAM, CLK_SWITCH_PARAM,
         MUTE_PARAM, LENGTH_PARAM, SHIFT_PARAM, SCALE_PARAM, SAVE_PARAM, RECALL_PARAM,
@@ -55,6 +54,7 @@ struct Skyline : Module {
         ENUMS(STEP_LIGHTS,     16*3),  // playhead (RGB)
         ENUMS(BUTTON_LIGHTS,   16*3),  // button LED (RGB)
         ENUMS(CHANNEL_LIGHTS,   8*3),  // channel output LED (RGB)
+        ENUMS(EDIT_RING_LIGHTS,  8),   // yellow glow ring
         ENUMS(MUTE_LIGHT,   3),        // latch button LEDs (RGB)
         ENUMS(LENGTH_LIGHT, 3),
         ENUMS(SHIFT_LIGHT,  3),
@@ -101,6 +101,7 @@ struct Skyline : Module {
     int   selectedChan      = 0;
     int   editChan          = 0;
     int   globalStep         = -1;
+    float glowPhase         = 0.f;
 
     float lengthSliderSnapshot[8] = {-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f,-1.f};
     float scaleSliderSnapshot     = -1.f;
@@ -517,10 +518,13 @@ struct Skyline : Module {
                 setRGB(CHANNEL_LIGHTS + ch*3, bright, 0.f, 0.f);
         }
 
-        // Custom display update logic (the centralized draw reads variables directly from module state)
+        glowPhase += args.sampleTime * 1.5f;
+        if (glowPhase > 2.f * M_PI) glowPhase -= 2.f * M_PI;
+        float glow = 0.45f + 0.45f * std::sin(glowPhase);
+        for (int ch = 0; ch < 8; ch++)
+            lights[EDIT_RING_LIGHTS + ch].setBrightness(ch == editChan ? glow : 0.f);
     }
 
-    // ROBUST CRASH-PROOF JSON PARSING TO AVOID SILENT NANSON C-LIBRARY CRASHES ON BOOT
     json_t* dataToJson() override {
         json_t* root=json_object();
         auto arrF=[&](const char* key,std::function<void(json_t*)> fn){
@@ -565,6 +569,7 @@ struct Skyline : Module {
     }
 
     void dataFromJson(json_t* root) override {
+        // ROBUST CRASH-PROOF JSON PARSING TO AVOID SILENT NANSON C-LIBRARY CRASHES ON BOOT
         auto getI = [&](const char* k, int idx) {
             json_t* a = json_object_get(root, k);
             if (!a) return 0;
@@ -690,6 +695,17 @@ struct SkylineDisplay : widget::Widget {
             nvgFillColor(args.vg, nvgRGB(0xb8,0xb5,0xae));
             nvgFill(args.vg);
 
+            // Draw target navy blue highlight if in edit mode
+            bool isTarget = ch == localSkyModule->editChan &&
+                (localSkyModule->muteMode || localSkyModule->lengthMode ||
+                 localSkyModule->scaleMode || localSkyModule->shiftMode);
+            if (isTarget) {
+                nvgBeginPath(args.vg);
+                nvgRoundedRect(args.vg, tx-3.f, ty-3.f, TW+6.f, TH+6.f, 5.f);
+                nvgFillColor(args.vg, nvgRGBAf(0.1f,0.25f,0.6f,0.35f));
+                nvgFill(args.vg);
+            }
+
             // Draw red active fill bar
             float handleY = (1.f - fillVal) * TH;
             nvgBeginPath(args.vg);
@@ -790,7 +806,7 @@ struct SkylineWidget : ModuleWidget {
                 nvgFontSize(args.vg, fontSize);
                 nvgFontFaceId(args.vg, APP->window->uiFont->handle);
                 nvgTextAlign(args.vg, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-                nvgFillColor(color); // FIXED NATIVE DRAW PARSING
+                nvgFillColor(args.vg, color); // FIXED NATIVE DRAW PARSING
                 nvgText(args.vg, box.size.x*.5f,     box.size.y*.5f,     text.c_str(), nullptr);
                 nvgText(args.vg, box.size.x*.5f+0.3f,box.size.y*.5f,     text.c_str(), nullptr);
             }
@@ -811,4 +827,5 @@ struct SkylineWidget : ModuleWidget {
     }
 };
 
+// COMPATIBLE MODULE SLUG
 Model* modelSkyline = createModel<Skyline, SkylineWidget>("SkylineMM");
