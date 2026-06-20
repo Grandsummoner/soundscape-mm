@@ -14,7 +14,7 @@
   "modules": [
     {
       "slug": "Skyline",
-      "name": "Skyline",
+      "name": "Skyline-MM", 
       "description": "8-Channel CV Sequencer",
       "tags": [
         "Sequencer",
