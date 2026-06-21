@@ -629,20 +629,34 @@ struct Skyline : Module {
 };
 
 // ============================================================
-// SlimFader — self-drawn ParamWidget, no runtime SVG loading.
-// IMPORTANT: do not change this to extend app::SvgSlider. SvgSlider's
-// handle/track state is normally initialized inside setTrackSvg /
-// setHandleSvg when real SVG data loads; skipping those calls leaves
-// that state uninitialized, and something downstream dereferences it
-// without a null-check — this hung the module entirely on hardware.
-// Bare ParamWidget has no such hidden dependency and is confirmed safe.
+// SlimFader — extends app::SvgSlider so the MetaModule's VCV-to-native
+// element translator recognizes it as a "Slider" (bare ParamWidget
+// wasn't reachable by the on-screen cursor on hardware, even though
+// it didn't crash). Loads SVGs from this plugin's OWN res/ folder via
+// asset::plugin — that path goes through the same SVG->PNG conversion
+// the panel already uses successfully. The earlier crash/hang came
+// from asset::sys (VCV's core ComponentLibrary, which doesn't exist
+// on the MetaModule filesystem) and from skipping setBackgroundSvg/
+// setHandleSvg entirely (which left SvgSlider's internal handle/
+// background state uninitialized). This mirrors JW-Modules'
+// JwHorizontalVCVSlider, which ships working on MetaModule via FM16Seq.
 // ============================================================
-struct SlimFader : app::ParamWidget {
+struct SlimFader : app::SvgSlider {
     static const int TW=6,TH=60,HW=14,HH=8;
     bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
     int  chanIndex=-1;          // which channel this slider belongs to
     Skyline* skyModule=nullptr; // for reading editChan / mode state
-    SlimFader(){box.size=Vec(HW,TH+HH);}
+    SlimFader(){
+        setBackgroundSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SkylineFaderBg.svg")));
+        setHandleSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SkylineFaderHandle.svg")));
+        background->box.size = Vec(TW, TH);
+        handle->box.size = Vec(HW, HH);
+        setHandlePosCentered(
+            Vec(TW/2.f, TH - HH/2.f),  // value 0 -> bottom
+            Vec(TW/2.f, HH/2.f)        // value 1 -> top
+        );
+        box.size = Vec(HW, TH+HH);
+    }
     void drawLayer(const DrawArgs& args,int layer) override {
         if(layer!=1) return;
         float val=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
