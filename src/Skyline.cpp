@@ -642,7 +642,7 @@ struct Skyline : Module {
 // JwHorizontalVCVSlider, which ships working on MetaModule via FM16Seq.
 // ============================================================
 struct SlimFader : app::SvgSlider {
-    static const int TW=6,TH=60,HW=14,HH=8;
+    static const int TW=6,TH=42,HW=14,HH=8;
     bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
     int  chanIndex=-1;          // which channel this slider belongs to
     Skyline* skyModule=nullptr; // for reading editChan / mode state
