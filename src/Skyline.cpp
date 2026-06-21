@@ -810,18 +810,35 @@ struct SkylineWidget : ModuleWidget {
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(xK2,yKnob)),module,Skyline::ATTENUATE_PARAM));
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(xK3,yKnob)),module,Skyline::DIVIDE_PARAM));
 
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB1,yB1)),module,Skyline::MUTE_PARAM,  Skyline::MUTE_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB2,yB1)),module,Skyline::LENGTH_PARAM,Skyline::LENGTH_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB3,yB1)),module,Skyline::SHIFT_PARAM, Skyline::SHIFT_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB1,yB2)),module,Skyline::SCALE_PARAM, Skyline::SCALE_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB2,yB2)),module,Skyline::SAVE_PARAM,  Skyline::SAVE_LIGHT));
-        addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<RedGreenBlueLight>>>(
-            mm2px(Vec(xB3,yB2)),module,Skyline::RECALL_PARAM,Skyline::RECALL_LIGHT));
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB1,yB1)),module,Skyline::MUTE_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB1,yB1)),module,Skyline::MUTE_LIGHT));
+
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB2,yB1)),module,Skyline::LENGTH_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB2,yB1)),module,Skyline::LENGTH_LIGHT));
+
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB3,yB1)),module,Skyline::SHIFT_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB3,yB1)),module,Skyline::SHIFT_LIGHT));
+
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB1,yB2)),module,Skyline::SCALE_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB1,yB2)),module,Skyline::SCALE_LIGHT));
+
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB2,yB2)),module,Skyline::SAVE_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB2,yB2)),module,Skyline::SAVE_LIGHT));
+
+        addParam(createParamCentered<VCVLatch>(
+            mm2px(Vec(xB3,yB2)),module,Skyline::RECALL_PARAM));
+        addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+            mm2px(Vec(xB3,yB2)),module,Skyline::RECALL_LIGHT));
 
         // REGISTER SLIDERS NATIVELY AS VCV SvgSliders (THE EXACT PATTERN USED BY BEFACO, VOSTOK & JW MODULES)
         // This is 100% crash-proof and guaranteed to map and render on the screen!
@@ -833,14 +850,27 @@ struct SkylineWidget : ModuleWidget {
             addParam(sf);
         }
 
+        // Buttons are now plain VCVButton with a SEPARATE, standalone
+        // light layered on top — not VCVLightButton (which embeds the
+        // light inside the button). NANOModules (4ms's own plugin,
+        // confirmed shipping on MetaModule) only ever uses standalone
+        // lights, never combined into a button; this mirrors that
+        // exact pattern instead of the untested combo-widget approach.
         for(int i=0;i<8;i++){
-            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<RedGreenBlueLight>>>(
-                mm2px(Vec(cX[i],yS1)),module,
-                Skyline::STEP_PARAMS+i, Skyline::BUTTON_LIGHTS+i*3));
+            addParam(createParamCentered<VCVButton>(
+                mm2px(Vec(cX[i],yS1)),module,Skyline::STEP_PARAMS+i));
+            addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+                mm2px(Vec(cX[i],yS1)),module,Skyline::BUTTON_LIGHTS+i*3));
+            // tiny playhead LED, just above the button
+            addChild(createLightCentered<SmallLight<RedGreenBlueLight>>(
+                mm2px(Vec(cX[i],yS1-5.f)),module,Skyline::STEP_LIGHTS+i*3));
 
-            addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<RedGreenBlueLight>>>(
-                mm2px(Vec(cX[i],yS2)),module,
-                Skyline::STEP_PARAMS+8+i, Skyline::BUTTON_LIGHTS+(8+i)*3));
+            addParam(createParamCentered<VCVButton>(
+                mm2px(Vec(cX[i],yS2)),module,Skyline::STEP_PARAMS+8+i));
+            addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(
+                mm2px(Vec(cX[i],yS2)),module,Skyline::BUTTON_LIGHTS+(8+i)*3));
+            addChild(createLightCentered<SmallLight<RedGreenBlueLight>>(
+                mm2px(Vec(cX[i],yS2-5.f)),module,Skyline::STEP_LIGHTS+(8+i)*3));
         }
 
         // All panel text (title, channel numbers, OFFSET/ATTEN/DIVIDE,
