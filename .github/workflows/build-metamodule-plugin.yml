@@ -64,6 +64,10 @@ jobs:
           
           # 2. Run the 4ms SvgToPng tool to generate assets/Skyline.png
           python3 ${{ github.workspace }}/metamodule-plugin-sdk/scripts/SvgToPng.py --input ${{ github.workspace }}/res/Skyline.svg --output ${{ github.workspace }}/assets/ --white --height 240
+
+          # 2b. Convert the SlimFader background/handle SVGs the same way
+          python3 ${{ github.workspace }}/metamodule-plugin-sdk/scripts/SvgToPng.py --input ${{ github.workspace }}/res/SkylineFaderBg.svg --output ${{ github.workspace }}/assets/ --height 60
+          python3 ${{ github.workspace }}/metamodule-plugin-sdk/scripts/SvgToPng.py --input ${{ github.workspace }}/res/SkylineFaderHandle.svg --output ${{ github.workspace }}/assets/ --height 8
           
           # 3. Print assets directory contents to console to verify the PNG was created
           echo "=== VERIFYING GENERATED ASSETS ==="
