@@ -642,15 +642,14 @@ struct Skyline : Module {
 // JwHorizontalVCVSlider, which ships working on MetaModule via FM16Seq.
 // ============================================================
 struct SlimFader : app::SvgSlider {
-    // TM/BM = top/bottom margin the handle's travel range stays clear
-    // of, even at extreme values — this is what actually fixes
-    // overlap with neighboring elements (RST/HOLD jack above, step
-    // buttons below), since the native renderer's handle footprint
-    // extends past the logical handle position by some margin we
-    // can't measure directly. TH/box.size.y stay the same as before,
-    // so the widget's position (ySld) doesn't need to change at all.
-    static const int TW=6,TH=60,HW=14,HH=8,TM=10,BM=10;
-    static const int TRAVEL = TH-TM-BM;
+    // TH/HW/HH here MUST exactly match SkylineFaderBg.svg's and
+    // SkylineFaderHandle.svg's own declared width/height. Every
+    // previous attempt at this changed these numbers in code only,
+    // leaving the SVG files at their original hardcoded size — feeding
+    // the native renderer mismatched size hints from two different
+    // sources, which is almost certainly why those attempts produced
+    // unpredictable results instead of just doing nothing or working.
+    static const int TW=6,TH=40,HW=14,HH=8,TM=6;
     bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
     int  chanIndex=-1;          // which channel this slider belongs to
     Skyline* skyModule=nullptr; // for reading editChan / mode state
@@ -660,15 +659,15 @@ struct SlimFader : app::SvgSlider {
         background->box.size = Vec(TW, TH);
         handle->box.size = Vec(HW, HH);
         setHandlePosCentered(
-            Vec(TW/2.f, TM+TRAVEL+HH/2.f),  // value 0 -> bottom, stops short of the box edge
-            Vec(TW/2.f, TM+HH/2.f)          // value 1 -> top, stops short of the box edge
+            Vec(TW/2.f, TH - HH/2.f),  // value 0 -> bottom
+            Vec(TW/2.f, TM + HH/2.f)   // value 1 -> top, with a margin below the very top edge
         );
         box.size = Vec(HW, TH+HH);
     }
     void drawLayer(const DrawArgs& args,int layer) override {
         if(layer!=1) return;
         float val=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
-        float handleY=TM+(1.f-val)*TRAVEL, tx=(box.size.x-TW)*0.5f;
+        float handleY=TM+(1.f-val)*(TH-TM), tx=(box.size.x-TW)*0.5f;
 
         bool isTarget = skyModule && chanIndex >= 0 && chanIndex == skyModule->editChan &&
             (skyModule->muteMode || skyModule->lengthMode ||
