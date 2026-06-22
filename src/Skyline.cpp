@@ -642,7 +642,15 @@ struct Skyline : Module {
 // JwHorizontalVCVSlider, which ships working on MetaModule via FM16Seq.
 // ============================================================
 struct SlimFader : app::SvgSlider {
-    static const int TW=6,TH=60,HW=14,HH=8;
+    // TM/BM = top/bottom margin the handle's travel range stays clear
+    // of, even at extreme values — this is what actually fixes
+    // overlap with neighboring elements (RST/HOLD jack above, step
+    // buttons below), since the native renderer's handle footprint
+    // extends past the logical handle position by some margin we
+    // can't measure directly. TH/box.size.y stay the same as before,
+    // so the widget's position (ySld) doesn't need to change at all.
+    static const int TW=6,TH=60,HW=14,HH=8,TM=10,BM=10;
+    static const int TRAVEL = TH-TM-BM;
     bool dragging=false; float dragStartY=0.f,dragStartVal=0.f;
     int  chanIndex=-1;          // which channel this slider belongs to
     Skyline* skyModule=nullptr; // for reading editChan / mode state
@@ -652,15 +660,15 @@ struct SlimFader : app::SvgSlider {
         background->box.size = Vec(TW, TH);
         handle->box.size = Vec(HW, HH);
         setHandlePosCentered(
-            Vec(TW/2.f, TH - HH/2.f),  // value 0 -> bottom
-            Vec(TW/2.f, HH/2.f)        // value 1 -> top
+            Vec(TW/2.f, TM+TRAVEL+HH/2.f),  // value 0 -> bottom, stops short of the box edge
+            Vec(TW/2.f, TM+HH/2.f)          // value 1 -> top, stops short of the box edge
         );
         box.size = Vec(HW, TH+HH);
     }
     void drawLayer(const DrawArgs& args,int layer) override {
         if(layer!=1) return;
         float val=getParamQuantity()?getParamQuantity()->getScaledValue():0.f;
-        float handleY=(1.f-val)*TH, tx=(box.size.x-TW)*0.5f;
+        float handleY=TM+(1.f-val)*TRAVEL, tx=(box.size.x-TW)*0.5f;
 
         bool isTarget = skyModule && chanIndex >= 0 && chanIndex == skyModule->editChan &&
             (skyModule->muteMode || skyModule->lengthMode ||
@@ -775,7 +783,7 @@ struct SkylineWidget : ModuleWidget {
         const float yOut=22.5f,yLed=31.0f;
         const float yClk=46.0f,yKnob=53.5f,yRst=61.0f;
         const float yB1=46.0f,yB2=61.0f;
-        const float ySld=62.0f,yS1=104.0f,yS2=119.0f,ySLbl=126.5f;
+        const float ySld=70.0f,yS1=104.0f,yS2=119.0f,ySLbl=126.5f;
 
         for(int ch=0;ch<8;ch++){
             addOutput(createOutputCentered<SkylinePort>(
