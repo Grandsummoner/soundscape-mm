@@ -1,4 +1,4 @@
-![Module Graphic](./assets/module-graphic.png)
+![Module Graphic](./assets/Skyline.png)
 
 # Skyline
 
