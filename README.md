@@ -58,5 +58,3 @@ Activating a mode lets you edit parameters using the bottom 16 step buttons:
 * **SAVE / RECALL:** Saves or recalls the entire sequencer state into one of the 16 preset slots (assigned to step buttons 1–16).
 
 ---
-h
-   make dist
