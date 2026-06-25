@@ -665,12 +665,23 @@ struct SlimFader : app::SvgSlider {
         setBackgroundSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SkylineFaderBg.svg")));
         setHandleSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SkylineFaderHandle.svg")));
         background->box.size = Vec(TW, TH);
+        // setBackgroundSvg() set both box.size AND fb->box.size to the
+        // background SVG's native size (TW x TH). That fb canvas is
+        // narrower than the handle (HW) and shorter than the full
+        // widget (TH+HH), so the handle was being rendered into a
+        // framebuffer too small to hold it and got clipped on both
+        // sides instead of centered in the wider hit-box -- that's
+        // the visual misalignment. Grow the fb to the full widget
+        // size, and center the (narrower) track inside it.
+        background->box.pos = Vec((HW - TW) / 2.f, 0.f);
         handle->box.size = Vec(HW, HH);
         setHandlePosCentered(
-            Vec(TW/2.f, TH - HH/2.f),  // value 0 -> bottom
-            Vec(TW/2.f, TM + HH/2.f)   // value 1 -> top, with a margin below the very top edge
+            Vec(HW/2.f, TH - HH/2.f),  // value 0 -> bottom (centered on box width, not track width)
+            Vec(HW/2.f, TM + HH/2.f)   // value 1 -> top, with a margin below the very top edge
         );
         box.size = Vec(HW, TH+HH);
+        fb->box.size = box.size;       // fb must be >= box, or it clips the handle/travel range
+        fb->setDirty();
     }
     void onButton(const ButtonEvent& e) override {
         if(e.action==GLFW_PRESS&&e.button==GLFW_MOUSE_BUTTON_LEFT){
