@@ -1,6 +1,6 @@
-![Module Graphic](./assets/Skyline.png)
-
 # Skyline
+
+![Module Graphic](./assets/Skyline.png)
 
 Skyline is an 8-channel CV sequencer designed for **VCV Rack v2** and optimized to compile for the **4ms Metamodule**. Heavily inspired by Eurorack sequencers like the Malekko Voltage Block, it provides flexible, high-density modulation, built-in quantization, and preset management in a single 20HP panel.
 
