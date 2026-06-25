@@ -692,6 +692,22 @@ struct SlimFader : app::SvgSlider {
         if(e.action==GLFW_RELEASE) dragging=false;
         ParamWidget::onButton(e);
     }
+    // Without cursorLock(), onDragMove's mouseDelta comes from the REAL
+    // OS cursor position, which is bounded by the screen/window edge --
+    // dragging straight down will physically run out of room a fixed
+    // distance below wherever you clicked, capping the value well short
+    // of 0 (the "can't go below halfway" symptom). cursorLock() warps
+    // the cursor back to center every frame and reports relative motion
+    // instead, removing that physical limit entirely. This mirrors
+    // exactly what Rack's own Knob::onDragStart/onDragEnd do.
+    void onDragStart(const DragStartEvent& e) override {
+        if(e.button==GLFW_MOUSE_BUTTON_LEFT) APP->window->cursorLock();
+        ParamWidget::onDragStart(e);
+    }
+    void onDragEnd(const DragEndEvent& e) override {
+        if(e.button==GLFW_MOUSE_BUTTON_LEFT) APP->window->cursorUnlock();
+        ParamWidget::onDragEnd(e);
+    }
     void onDragMove(const DragMoveEvent& e) override {
         if(!dragging||!getParamQuantity()) return;
         float sensitivity = (APP->window->getMods() & RACK_MOD_CTRL) ? 240.f : 60.f;
