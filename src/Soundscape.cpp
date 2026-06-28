@@ -487,9 +487,18 @@ struct SoundscapeDisplay : LightWidget {
                 nvgFill(args.vg);
             }
         } else {
+            // Glyph alpha reflects this channel's CHANNEL_LIGHTS brightness
+            // (output level) — folds the old standalone LED dot into the
+            // display itself instead of a separate widget below it.
+            int base = Soundscape::CHANNEL_LIGHTS + channelId * 3;
+            float lvl = module->lights[base + 0].getBrightness()
+                      + module->lights[base + 1].getBrightness()
+                      + module->lights[base + 2].getBrightness();
+            float alpha = 0.35f + 0.65f * clamp(lvl, 0.f, 1.f);
+
             nvgFontSize(args.vg, 20.f);
             nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            nvgFillColor(args.vg, nvgRGBA(0xff, 0x9d, 0x00, 0xff));
+            nvgFillColor(args.vg, nvgRGBAf(1.f, 0.62f, 0.f, alpha));
             const char* glyph = "C";
             if (module->chMode[channelId] == Soundscape::CH_PITCH) glyph = "P";
             else if (module->chMode[channelId] == Soundscape::CH_GATE) glyph = "G";
@@ -576,9 +585,9 @@ struct SoundscapeWidget : ModuleWidget {
         setPanel(createPanel(asset::plugin(pluginInstance, "res/Soundscape.svg")));
 
         // ---- Top control cluster ----
-        const float xClk = 10.f, xRst = 22.f, xSwitch = 34.f;
-        const float xK1 = 50.f, xK2 = 64.f, xK3 = 78.f;
-        const float yTop = 24.f;
+        const float xClk = 10.f, xRst = 24.f, xSwitch = 40.f;
+        const float xK1 = 60.f, xK2 = 82.f, xK3 = 104.f;
+        const float yTop = 32.f;
 
         addInput(createInputCentered<SoundscapePort>(mm2px(Vec(xClk, yTop)), module, Soundscape::CLOCK_INPUT));
         addInput(createInputCentered<SoundscapePort>(mm2px(Vec(xRst, yTop)), module, Soundscape::RESET_INPUT));
@@ -588,8 +597,13 @@ struct SoundscapeWidget : ModuleWidget {
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(xK3, yTop)), module, Soundscape::KNOB3_PARAM));
 
         // ---- Per-channel columns ----
+        // Order top-to-bottom mirrors Skyline's tight output/LED pairing,
+        // but with the 7-seg display sitting directly above the CV output
+        // (replacing the old separate LED dot, which is now folded into
+        // the display's own glyph brightness — see SoundscapeDisplay::draw).
         const float startX = 14.f, stepX = 16.f;
-        const float yKnob = 40.f, ySld = 48.f, yDisplay = 92.f, yLed = 100.f, yOut = 108.f, yPerform = 118.f;
+        const float yKnob = 50.f, ySld = 58.f;
+        const float yDisplayGlyph = 88.f, yDisplayBtn = 94.f, yOut = 102.f, yPerform = 118.f;
 
         for (int ch = 0; ch < 8; ch++) {
             float cx = startX + ch * stepX;
@@ -598,20 +612,20 @@ struct SoundscapeWidget : ModuleWidget {
 
             addParam(createParam<SoundscapeSlider>(mm2px(Vec(cx - 2.37f, ySld)), module, Soundscape::SLIDER_PARAMS + ch));
 
-            auto* disp = createWidget<SoundscapeDisplay>(mm2px(Vec(cx - 4.f, yDisplay - 4.f)));
+            auto* disp = createWidget<SoundscapeDisplay>(mm2px(Vec(cx - 4.f, yDisplayGlyph - 10.f)));
             disp->module = module;
             disp->channelId = ch;
             addChild(disp);
-            addParam(createParamCentered<VCVButton>(mm2px(Vec(cx, yDisplay + 6.f)), module, Soundscape::DISPLAY_BTN_PARAMS + ch));
+            addParam(createParamCentered<VCVButton>(mm2px(Vec(cx, yDisplayBtn)), module, Soundscape::DISPLAY_BTN_PARAMS + ch));
 
+            addOutput(createOutputCentered<SoundscapePort>(mm2px(Vec(cx, yOut)), module, Soundscape::CV_OUTPUTS + ch));
+
+            // Edit-target glow ring now wraps the output jack itself.
             auto* ring = new EditRingLight;
             ring->mod = module;
             ring->lightId = Soundscape::EDIT_RING_LIGHTS + ch;
-            ring->box.pos = mm2px(Vec(cx, yLed)).minus(ring->box.size.div(2.f));
+            ring->box.pos = mm2px(Vec(cx, yOut)).minus(ring->box.size.div(2.f));
             addChild(ring);
-            addChild(createLightCentered<SmallLight<RedGreenBlueLight>>(mm2px(Vec(cx, yLed)), module, Soundscape::CHANNEL_LIGHTS + ch * 3));
-
-            addOutput(createOutputCentered<SoundscapePort>(mm2px(Vec(cx, yOut)), module, Soundscape::CV_OUTPUTS + ch));
 
             addParam(createParamCentered<VCVButton>(mm2px(Vec(cx, yPerform)), module, Soundscape::PERFORM_PARAMS + ch));
             addChild(createLightCentered<MediumSimpleLight<RedGreenBlueLight>>(mm2px(Vec(cx, yPerform)), module, Soundscape::PERFORM_LIGHTS + ch * 3));
