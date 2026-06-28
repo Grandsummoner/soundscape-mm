@@ -15,11 +15,11 @@
     {
       "slug": "SoundscapeMM",
       "name": "Soundscape-MM",
-      "description": "8-Channel Architectural CV Sequencer & Modulation Processor",
+      "description": "Multi-Mode 8-Channel CV Sequencer and Quantizer",
       "tags": [
         "Sequencer",
-        "Modulation",
-        "Clock Modulator"
+        "Quantizer",
+        "Dual / Stereo"
       ]
     }
   ]
