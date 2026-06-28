@@ -15,33 +15,24 @@ endif()
 include(${METAMODULE_SDK_DIR}/plugin.cmake)
 
 # 3. Declare the project metadata
-project(maybe-Skyline-MM
+project(maybe-Soundscape-MM
     VERSION 2.0.1
-    DESCRIPTION "Skyline for MetaModule"
+    DESCRIPTION "Soundscape for MetaModule"
     LANGUAGES C CXX ASM
 )
 
 # 4. Define the library target
-add_library(Skyline STATIC)
+add_library(Soundscape STATIC)
 
 # 5. Automatically locate and compile all .cpp files inside the src/ folder
 file(GLOB sources src/*.cpp)
-target_sources(Skyline PRIVATE ${sources})
-target_include_directories(Skyline PRIVATE src/)
+target_sources(Soundscape PRIVATE ${sources})
+target_include_directories(Soundscape PRIVATE src/)
 
 # 6. Configure compiler standards
-set_property(TARGET Skyline PROPERTY CXX_STANDARD 17)
+set_property(TARGET Soundscape PROPERTY CXX_STANDARD 17)
 
 # 7. Configure installation destination
 if("${MM_INSTALL_DIR}" STREQUAL "")
     set(MM_INSTALL_DIR ${CMAKE_CURRENT_LIST_DIR}/metamodule-plugins)
 endif()
-
-# 8. Call the built-in creator to build the final hardware-ready plugin bundle
-create_plugin(
-    SOURCE_LIB Skyline
-    PLUGIN_NAME maybe-Skyline-MM
-    PLUGIN_JSON ${CMAKE_CURRENT_LIST_DIR}/plugin.json
-    SOURCE_ASSETS ${CMAKE_CURRENT_LIST_DIR}/assets
-    DESTINATION ${MM_INSTALL_DIR}
-)
