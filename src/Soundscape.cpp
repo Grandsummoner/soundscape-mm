@@ -631,11 +631,13 @@ struct Soundscape : Module {
 // the SoundscapeFaderBg/Handle SVGs already in res/.
 // ============================================================
 struct SoundscapeSlider : app::SvgSlider {
-#if defined(ARCH_WIN) || defined(ARCH_MAC) || defined(ARCH_LIN)
-    static const int TW=6, TH=60, HW=14, HH=8, TM=6;
-#else
+    // NOTE: OG Skyline's SlimFader used a desktop/firmware TH=60/40 split,
+    // but that only works if there's a correspondingly-sized 60px asset for
+    // desktop. SoundscapeFaderBg.svg is a single 6x40 asset, so a TH=60
+    // override here just draws the native 40px rect inside a taller box,
+    // leaving the bottom ~20px empty (showing the panel color through —
+    // the two-tone look). Sizing to the actual asset fixes it outright.
     static const int TW=6, TH=40, HW=14, HH=8, TM=6;
-#endif
     bool  dragging     = false;
     float dragStartVal = 0.f;
 
@@ -643,19 +645,12 @@ struct SoundscapeSlider : app::SvgSlider {
         setBackgroundSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SoundscapeFaderBg.svg")));
         setHandleSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SoundscapeFaderHandle.svg")));
 
-#if defined(ARCH_WIN) || defined(ARCH_MAC) || defined(ARCH_LIN)
-        background->box.size = Vec(TW, TH);
-        background->box.pos  = Vec((HW - TW) / 2.f, HH / 2.f);
-        handle->box.size     = Vec(HW, HH);
-        setHandlePosCentered(Vec(HW/2.f, TH + HH/2.f), Vec(HW/2.f, HH/2.f));
-        box.size = Vec(HW, TH + HH);
-#else
         background->box.size = Vec(TW, TH);
         background->box.pos  = Vec((HW - TW) / 2.f, 0.f);
         handle->box.size     = Vec(HW, HH);
         setHandlePosCentered(Vec(HW/2.f, TH - HH/2.f), Vec(HW/2.f, TM + HH/2.f));
         box.size = Vec(HW, TH + HH);
-#endif
+
         fb->box.size = box.size;
         fb->setDirty();
     }
@@ -750,8 +745,7 @@ struct SoundscapePort : app::SvgPort {
 // save vertical space, per request.
 // ============================================================
 struct ChModeButton : ParamWidget {
-    Soundscape* module    = nullptr;
-    int         channelId = 0;
+    int channelId = 0;
 
     ChModeButton() { box.size = Vec(24, 20); }
 
@@ -771,11 +765,15 @@ struct ChModeButton : ParamWidget {
         nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, 2.f);
         nvgFillColor(args.vg, nvgRGBA(0x1a, 0x1a, 0x1a, 0xff));
         nvgFill(args.vg);
-        if (!module) return;
 
-        bool tweaking = module->chTweakTimer[channelId] > 0.f;
+        // `module` here is ParamWidget's own engine::Module* — cast to the
+        // concrete type to read Soundscape-specific state for drawing.
+        auto* mod = dynamic_cast<Soundscape*>(module);
+        if (!mod) return;
+
+        bool tweaking = mod->chTweakTimer[channelId] > 0.f;
         if (tweaking) {
-            float strength = module->params[Soundscape::SLIDER_PARAMS + channelId].getValue() / 4.f;
+            float strength = mod->params[Soundscape::SLIDER_PARAMS + channelId].getValue() / 4.f;
             int bars = clamp((int)std::round(strength * 4.f) + 1, 1, 5);
             for (int b = 0; b < bars; b++) {
                 float t = (float)b / 4.f; // green (0) -> red (1)
@@ -785,7 +783,7 @@ struct ChModeButton : ParamWidget {
                 nvgFill(args.vg);
             }
         } else {
-            int chm = (int)module->params[Soundscape::CHMODE_PARAMS + channelId].getValue();
+            int chm = getParamQuantity() ? (int)getParamQuantity()->getValue() : 0;
             const char* glyph = "C";
             if (chm == Soundscape::CH_PITCH) glyph = "P";
             else if (chm == Soundscape::CH_GATE) glyph = "G";
@@ -825,8 +823,9 @@ struct SoundscapeWidget : ModuleWidget {
         const float ySld = 70.0f, yS1 = 104.0f, yS2 = 119.0f;
 
         for (int ch = 0; ch < 8; ch++) {
-            auto* cm = createWidget<ChModeButton>(mm2px(Vec(cX[ch], yChMode)).minus(Vec(12, 10)));
-            cm->module = module;
+            auto* cm = createParam<ChModeButton>(
+                mm2px(Vec(cX[ch], yChMode)).minus(Vec(12, 10)),
+                module, Soundscape::CHMODE_PARAMS + ch);
             cm->channelId = ch;
             addParam(cm);
 
