@@ -310,8 +310,14 @@ struct Soundscape : Module {
                 v = quantizeVoltage(v, scaleIndex[ch]);
         }
 
-        // Apply offset (INT: live; EXT: sample-held)
-        v += k2offset;
+        // Apply offset — scale to pitch range for P channels so the
+        // full fader travel stays usable regardless of k2 position.
+        // CV: ±5V offset (k2offset as-is).
+        // Pitch: ±1V offset (one octave transpose) — proportionally scaled.
+        if (chm == CH_PITCH)
+            v += k2offset * 0.2f;  // ±5V → ±1V
+        else
+            v += k2offset;
 
         // Glide
         if (stepSmooth[ch][pos]) {
@@ -869,7 +875,7 @@ struct SoundscapePort : app::SvgPort {
 // SoundscapeSlider
 // ============================================================
 struct SoundscapeSlider : app::SvgSlider {
-    static const int TW=6,TH=90,HW=14,HH=8,TM=6;
+    static const int TW=6,TH=60,HW=14,HH=8,TM=6;
     bool dragging=false; float dragStartVal=0.f;
     SoundscapeSlider(){
         setBackgroundSvg(APP->window->loadSvg(asset::plugin(pluginInstance,"res/SoundscapeFaderBg.svg")));
@@ -1100,10 +1106,12 @@ struct SoundscapeWidget : ModuleWidget {
 
         // CLK/CV: input jack in EXT/MOD, output jack in INT.
         // Both ports share the same panel position — only one is active at a time.
+        // CLK/CV: input jack always visible and patchable.
+        // In INT mode CLOCK_OUT carries the clock signal internally
+        // (accessible via right-click menu) without a visible port
+        // blocking this jack.
         addInput(createInputCentered<SoundscapePort>(
             mm2px(Vec(xJack,yClk)),module,Soundscape::CLOCK_INPUT));
-        addOutput(createOutputCentered<SoundscapePort>(
-            mm2px(Vec(xJack,yClk)),module,Soundscape::CLOCK_OUT));
         addInput(createInputCentered<SoundscapePort>(
             mm2px(Vec(xJack,yRst)),module,Soundscape::RESET_INPUT));
 
